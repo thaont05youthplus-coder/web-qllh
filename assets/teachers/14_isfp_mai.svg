@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg14" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FDF9EB"/>
+      <stop offset="100%" stop-color="#F9F0D0"/>
+    </linearGradient>
+    <linearGradient id="blouse14" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F2D77E"/>
+      <stop offset="100%" stop-color="#DFB84B"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg14)"/>
+
+  <!-- Long loose dark hair -->
+  <path d="M164 176 C140 245, 136 360, 152 430 C178 442, 206 420, 212 372 L300 372 C306 420, 334 442, 360 430 C376 360, 372 245, 348 176 C332 108, 180 108, 164 176 Z" fill="#1E222E"/>
+
+  <!-- Cream yellow blouse -->
+  <path d="M114 512 C122 394, 174 350, 224 340 L288 340 C338 350, 390 394, 398 512 Z" fill="url(#blouse14)" stroke="#A78223" stroke-width="4"/>
+  <!-- Soft blouse collar -->
+  <path d="M222 340 Q256 368 290 340" fill="none" stroke="#FFFDF5" stroke-width="10" stroke-linecap="round"/>
+  <path d="M256 356 L256 410" stroke="#A78223" stroke-width="3" opacity="0.45"/>
+
+  <!-- Neck & shadow -->
+  <rect x="230" y="290" width="52" height="60" rx="18" fill="#F5C09B"/>
+  <path d="M230 304 Q256 322 282 304 L282 294 L230 294 Z" fill="#DFA079" opacity="0.5"/>
+
+  <!-- Ears -->
+  <ellipse cx="186" cy="232" rx="12" ry="19" fill="#F5C09B" stroke="#C98A63" stroke-width="3"/>
+  <ellipse cx="326" cy="232" rx="12" ry="19" fill="#F5C09B" stroke="#C98A63" stroke-width="3"/>
+
+  <!-- Face -->
+  <path d="M188 206 C188 144, 324 144, 324 206 C324 272, 294 312, 256 312 C218 312, 188 272, 188 206 Z" fill="#FCCBAE" stroke="#C98A63" stroke-width="3.5"/>
+  <!-- Soft artistic blush -->
+  <ellipse cx="215" cy="248" rx="16" ry="8" fill="#F49386" opacity="0.32"/>
+  <ellipse cx="297" cy="248" rx="16" ry="8" fill="#F49386" opacity="0.32"/>
+
+  <!-- Eyes & Eyebrows -->
+  <path d="M210 202 Q226 194 240 200" fill="none" stroke="#222733" stroke-width="4" stroke-linecap="round"/>
+  <path d="M272 200 Q286 194 302 202" fill="none" stroke="#222733" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="226" cy="221" rx="9" ry="10.5" fill="#1E222E"/>
+  <ellipse cx="286" cy="221" rx="9" ry="10.5" fill="#1E222E"/>
+  <circle cx="229" cy="217" r="3" fill="#FFFFFF"/>
+  <circle cx="289" cy="217" r="3" fill="#FFFFFF"/>
+
+  <!-- Nose & Gentle Smile -->
+  <path d="M254 224 Q260 240 253 246" fill="none" stroke="#C98A63" stroke-width="3" stroke-linecap="round"/>
+  <path d="M235 266 Q256 282 277 266" fill="none" stroke="#C2645A" stroke-width="4.2" stroke-linecap="round"/>
+
+  <!-- Hair bangs + side hair clip -->
+  <path d="M182 210 C184 140, 240 120, 286 132 C320 140, 332 174, 330 212 C316 176, 286 158, 256 156 C228 168, 200 184, 182 210 Z" fill="#232836"/>
+  <rect x="292" y="166" width="28" height="9" rx="4.5" transform="rotate(20 306 170)" fill="#FFFBEB" stroke="#C9A227" stroke-width="2.5"/>
+
+  <!-- Hand-drawn Picture Card held in front -->
+  <g transform="translate(182, 376) rotate(-3)">
+    <rect x="0" y="0" width="148" height="106" rx="10" fill="#FFFFFF" stroke="#B68F2D" stroke-width="3.5"/>
+    <rect x="10" y="10" width="128" height="86" rx="6" fill="#E0F2FE"/>
+    <circle cx="108" cy="30" r="13" fill="#FACC15"/>
+    <path d="M10 96 L48 54 L84 96 Z" fill="#86EFAC"/>
+    <path d="M56 96 L94 46 L138 96 Z" fill="#4ADE80"/>
+    <circle cx="38" cy="74" r="6" fill="#F472B6"/>
+  </g>
+
+  <!-- Gentle hands holding picture card -->
+  <ellipse cx="182" cy="436" rx="19" ry="15" fill="#FCCBAE" stroke="#C98A63" stroke-width="3"/>
+  <ellipse cx="332" cy="430" rx="19" ry="15" fill="#FCCBAE" stroke="#C98A63" stroke-width="3"/>
+</svg>

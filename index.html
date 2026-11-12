@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mô phỏng Sư phạm — Quản lý Lớp học & Luật Nhà giáo 2025</title>
+    <link rel="stylesheet" href="style.css?v=20261112_v13">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <!-- Canvas 3D WebGL -->
+    <div id="canvas-container">
+        <canvas id="webgl-canvas"></canvas>
+    </div>
+
+    <!-- HUD Giao Diện Người Chơi -->
+    <div id="hud-overlay">
+        <!-- Tâm ngắm (Crosshair) -->
+        <div id="crosshair"></div>
+        <div id="interaction-prompt">
+            <span class="key-badge">E</span>
+            <span id="prompt-text">Tương tác</span>
+        </div>
+
+        <!-- Bảng thống kê hiệu năng & Cấu hình nét -->
+        <div id="stats-panel">
+            <div class="stat-row">
+                <span class="stat-label">Cấu hình:</span>
+                <span id="stat-preset" class="badge-quality">SIÊU NÉT (ULTRA)</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Điểm Luật 2025:</span>
+                <span id="stat-pedagogy-score" class="stat-value" style="color:#fbbf24;">0 / 500</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Tốc độ khung hình:</span>
+                <span id="stat-fps" class="stat-value">60 FPS</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Độ phân giải:</span>
+                <span id="stat-res" class="stat-value">1920×1080 @ 2.0x</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Góc nhìn:</span>
+                <span id="stat-cam-mode" class="stat-value" style="color: #a7f3d0;">Người thứ nhất (FPS)</span>
+            </div>
+        </div>
+
+        <!-- Bản đồ Mini-map thời gian thực -->
+        <div id="minimap-container">
+            <canvas id="minimap-canvas" width="140" height="140"></canvas>
+            <div id="minimap-title">SƠ ĐỒ LỚP HỌC</div>
+        </div>
+
+        <!-- Thanh công cụ HUD dưới màn hình -->
+        <div id="hud-toolbar">
+            <button id="btn-gameplay-guide" class="hud-btn" style="background: rgba(2, 132, 199, 0.4); border-color: #38bdf8;" title="Mở Hướng dẫn Quy trình 4 bước (Phím C)">
+                <span class="btn-icon">📖</span>
+                <span>Cách chơi</span>
+                <span class="btn-key">C</span>
+            </button>
+            <button id="btn-scenarios" class="hud-btn" style="background: rgba(5, 150, 105, 0.4); border-color: #10b981;" title="Chọn 5 Tình huống Quản lý lớp học (Phím P)">
+                <span class="btn-icon">🎯</span>
+                <span>5 Tình huống</span>
+                <span class="btn-key">P</span>
+            </button>
+            <button id="btn-ai-students" class="hud-btn" style="background: rgba(124, 58, 237, 0.4); border-color: #a855f7;" title="Nghe lại lời thoại Học sinh trong lớp (Phím U)">
+                <span class="btn-icon">👥</span>
+                <span>Học sinh</span>
+                <span class="btn-key">U</span>
+            </button>
+            <button id="btn-mic-quick" class="hud-btn" style="background: rgba(220, 38, 38, 0.35); border-color: #f87171;" title="Bật / Tắt Micro Speech-to-Text (Phím T)">
+                <span class="btn-icon">🎙️</span>
+                <span>Micro STT</span>
+                <span class="btn-key">T</span>
+            </button>
+            <button id="btn-pointer-lock" class="hud-btn" title="Khóa chuột góc nhìn FPS (Double-click màn hình)">
+                <span class="btn-icon">🔒</span>
+                <span>Khóa FPS</span>
+            </button>
+            <button id="btn-settings" class="hud-btn" title="Cài đặt cấu hình đồ họa nét (Phím O)">
+                <span class="btn-icon">⚙️</span>
+                <span>Cấu hình nét</span>
+                <span class="btn-key">O</span>
+            </button>
+            <button id="btn-toggle-lights" class="hud-btn" title="Bật / Tắt đèn phòng học (Phím L)">
+                <span class="btn-icon">💡</span>
+                <span>Đèn lớp</span>
+                <span class="btn-key">L</span>
+            </button>
+            <button id="btn-school-bell" class="hud-btn" title="Gõ chuông trường báo giờ học (Phím B)">
+                <span class="btn-icon">🔔</span>
+                <span>Chuông</span>
+                <span class="btn-key">B</span>
+            </button>
+            <button id="btn-toggle-bgm" class="hud-btn" title="Nhạc nền Lofi thư giãn (Phím M)">
+                <span class="btn-icon">🎵</span>
+                <span>Lofi</span>
+                <span class="btn-key">M</span>
+            </button>
+            <button id="btn-toggle-view" class="hud-btn" title="Đổi góc nhìn thứ nhất / toàn cảnh (Phím V)">
+                <span class="btn-icon">📷</span>
+                <span>Góc nhìn</span>
+                <span class="btn-key">V</span>
+            </button>
+            <button id="btn-help" class="hud-btn" title="Hướng dẫn phím tắt (Phím H)">
+                <span class="btn-icon">❓</span>
+                <span>Trợ giúp</span>
+                <span class="btn-key">H</span>
+            </button>
+        </div>
+
+        <!-- Phím ảo di chuyển trên điện thoại/cảm ứng -->
+        <div id="mobile-controls">
+            <button id="m-btn-interact" class="touch-btn">🖐️</button>
+            <button id="m-btn-jump" class="touch-btn">🚀</button>
+        </div>
+    </div>
+
+    <!-- Màn hình Khởi động ẩn mặc định (luồng bắt đầu trực tiếp từ Bước 1 – Hướng dẫn nhanh) -->
+    <div id="blocker" class="hidden">
+        <div id="start-card" style="max-width: 720px;">
+            <h1>MÔ PHỎNG QUẢN LÝ LỚP HỌC ẢO 3D</h1>
+            <p class="subtitle">Trải nghiệm giảng dạy tiếng Anh 3D với <strong>5 Tình huống Quản lý lớp học</strong>, giao tiếp <strong>Speech-to-Text (Micro) & Text-to-Speech (Học sinh AI)</strong> và nhận xét chuẩn theo <strong>Luật Nhà giáo số 73/2025/QH15</strong>.</p>
+
+            <div class="instruction-grid">
+                <div class="instruction-item" style="border-color:#10b981;">
+                    <span class="key" style="background:#059669; color:#fff;">P</span>
+                    <span><strong>5 Tình huống</strong> mô phỏng thực tế</span>
+                </div>
+                <div class="instruction-item" style="border-color:#f87171;">
+                    <span class="key" style="background:#dc2626; color:#fff;">T / Micro</span>
+                    <span><strong>Nói STT</strong> điều phối lớp (Việt / Anh)</span>
+                </div>
+                <div class="instruction-item" style="border-color:#38bdf8;">
+                    <span class="key" style="background:#0284c7; color:#fff;">C</span>
+                    <span><strong>Cách chơi</strong> & quy trình 4 bước</span>
+                </div>
+                <div class="instruction-item" style="border-color:#a855f7;">
+                    <span class="key" style="background:#7c3aed; color:#fff;">Click HS</span>
+                    <span>Nghe lại lời thoại <strong>Text-to-Speech</strong></span>
+                </div>
+                <div class="instruction-item">
+                    <span class="key">Kéo Chuột</span>
+                    <span>Xoay góc nhìn 360° không cần khóa chuột</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="key">W A S D</span>
+                    <span>Di chuyển lại gần từng bàn học sinh</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="key">O</span>
+                    <span>Cài đặt Đồ Họa Cấu Hình Nét (Ultra HD)</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="key">V</span>
+                    <span>Đổi góc nhìn FPS / Toàn cảnh lớp</span>
+                </div>
+            </div>
+
+            <button id="btn-start-game" class="btn-primary-large">
+                <span>VÀO LỚP HỌC & BẮT ĐẦU MÔ PHỎNG</span>
+                <span>👉</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL CÀI ĐẶT CẤU HÌNH ĐỒ HỌA NÉT -->
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ CÀI ĐẶT ĐỒ HỌA & ĐỘ NÉT</h2>
+                <button id="btn-close-settings" class="btn-close">&times;</button>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-title">
+                    <span>Mức cấu hình định sẵn:</span>
+                </div>
+                <div class="preset-grid">
+                    <button class="preset-btn active" data-preset="ultra">Siêu Nét (4K/2K)</button>
+                    <button class="preset-btn" data-preset="high">Sắc Nét (HD)</button>
+                    <button class="preset-btn" data-preset="medium">Tiêu chuẩn (60FPS)</button>
+                    <button class="preset-btn" data-preset="low">Tiết kiệm PIN</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-desc">Tỷ lệ phân giải sắc nét (Resolution Scale)</div>
+                        <div class="setting-sub">Tận dụng độ phân giải màn hình Retina/High-DPI</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="range" id="slider-res-scale" class="range-slider" min="0.5" max="2.0" step="0.25" value="2.0">
+                        <span id="val-res-scale" style="font-family:monospace; min-width:35px; color:#38bdf8;">2.0x</span>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-desc">Khử răng cưa (Anti-Aliasing)</div>
+                        <div class="setting-sub">Làm mịn viền vật thể, chữ và mép bàn ghế</div>
+                    </div>
+                    <label class="custom-switch">
+                        <input type="checkbox" id="chk-antialiasing" checked>
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-desc">Đổ bóng mềm sắc nét (Soft Shadows)</div>
+                        <div class="setting-sub">Bóng đổ thời gian thực 2048x2048 PCF Soft Map</div>
+                    </div>
+                    <label class="custom-switch">
+                        <input type="checkbox" id="chk-shadows" checked>
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-desc">Ánh nắng tự nhiên từ cửa sổ (Sunlight)</div>
+                        <div class="setting-sub">Tạo hiệu ứng vệt nắng ấm chiếu qua khung cửa sổ</div>
+                    </div>
+                    <label class="custom-switch">
+                        <input type="checkbox" id="chk-sunlight" checked>
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-desc">Góc nhìn rộng (Field of View - FOV)</div>
+                        <div class="setting-sub">Tùy chỉnh độ rộng quan sát không gian</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="range" id="slider-fov" class="range-slider" min="50" max="95" step="5" value="75">
+                        <span id="val-fov" style="font-family:monospace; min-width:35px; color:#38bdf8;">75°</span>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-desc">Hiệu ứng nhún bước chân (Head Bobbing)</div>
+                        <div class="setting-sub">Tạo cảm giác bước đi tự nhiên như trong game thực</div>
+                    </div>
+                    <label class="custom-switch">
+                        <input type="checkbox" id="chk-headbob" checked>
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 15px;">
+                <button id="btn-save-settings" class="btn-primary-large" style="padding: 10px 24px; font-size: 14px;">
+                    Áp Dụng Cài Đặt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XEM CHI TIẾT BÀI GIẢNG / BẢNG THÔNG MINH -->
+    <div id="slide-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📚 MÀN HÌNH BÀI GIẢNG TƯƠNG TÁC</h2>
+                <button id="btn-close-slide" class="btn-close">&times;</button>
+            </div>
+            <div id="slide-content-area" style="text-align: center;">
+                <canvas id="slide-preview-canvas" width="700" height="394" style="max-width:100%; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.5);"></canvas>
+            </div>
+            <div class="slide-controls">
+                <button id="btn-prev-slide" class="hud-btn">◀ Slide trước</button>
+                <span id="slide-number-indicator" style="font-weight:700; color:#38bdf8;">1 / 4</span>
+                <button id="btn-next-slide" class="hud-btn">Slide tiếp theo ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TRỢ GIÚP / HƯỚNG DẪN -->
+    <div id="help-modal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2>💡 BẢNG HƯỚNG DẪN PHÍM TẮT</h2>
+                <button id="btn-close-help" class="btn-close">&times;</button>
+            </div>
+            <div style="font-size: 14px; line-height: 1.8; color: #cbd5e1;">
+                <p>🔹 <strong>W, A, S, D</strong> hoặc <strong>Phím Mũi Tên</strong>: Di chuyển lại gần bàn học sinh.</p>
+                <p>🔹 <strong>Kéo Chuột Trái</strong>: Xoay góc nhìn tự do 360° (hoặc Double-click để Khóa chuột FPS).</p>
+                <p>🔹 <strong>Phím P</strong>: Mở danh sách 5 Tình huống Quản lý lớp học.</p>
+                <p>🔹 <strong>Phím T</strong>: Bật / Tắt Micro Speech-to-Text để nói điều phối lớp.</p>
+                <p>🔹 <strong>Phím C / U</strong>: Mở Hướng dẫn 4 bước / Nghe lại lời thoại Học sinh.</p>
+                <p>🔹 <strong>Phím E / Click trực tiếp</strong>: Tương tác học sinh, bảng viết, quả địa cầu, laptop.</p>
+                <p>🔹 <strong>Phím L / B / M</strong>: Bật/tắt đèn trần · Chuông trường · Nhạc nền Lofi.</p>
+                <p>🔹 <strong>Phím V / O</strong>: Góc nhìn FPS / Toàn cảnh · Cấu hình đồ họa Ultra HD.</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="btn-confirm-help" class="btn-primary-large" style="padding: 10px 28px; font-size: 14px;">
+                    Đã Hiểu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tải các thư viện và script logic (v=20261112_v13 chống cache) -->
+    <script src="libs/three.min.js"></script>
+    <script src="textures.js?v=20261112_v13"></script>
+    <script src="audio.js?v=20261112_v13"></script>
+    <script src="ttsManifest.js?v=20261112_v13"></script>
+    <script src="speechEngine.js?v=20261112_v13"></script>
+    <script src="scenariosData.js?v=20261112_v13"></script>
+    <script src="scenarioSystem.js?v=20261112_v13"></script>
+    <script src="characters.js?v=20261112_v13"></script>
+    <script src="game.js?v=20261112_v13"></script>
+</body>
+</html>

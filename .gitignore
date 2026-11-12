@@ -1,0 +1,11 @@
+# Secrets & API keys (never commit)
+.elevenlabs.key
+.env
+.env.*
+
+# Dependencies & OS files
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log

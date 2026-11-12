@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg16" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FEF9E4"/>
+      <stop offset="100%" stop-color="#FCEFC4"/>
+    </linearGradient>
+    <linearGradient id="dress16" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F7D046"/>
+      <stop offset="100%" stop-color="#E1AF19"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg16)"/>
+
+  <!-- Hair back -->
+  <path d="M166 184 C150 245, 152 325, 178 358 L334 358 C360 325, 362 245, 346 184 C328 112, 184 112, 166 184 Z" fill="#1F2430"/>
+
+  <!-- Bright Yellow Dress -->
+  <path d="M114 512 C122 396, 176 352, 224 342 L288 342 C336 352, 390 396, 398 512 Z" fill="url(#dress16)" stroke="#B5850B" stroke-width="4"/>
+  <!-- Dress scoop collar -->
+  <path d="M214 342 Q256 382 298 342" fill="#FCCBAE" stroke="#B5850B" stroke-width="3.5"/>
+
+  <!-- Neck & shadow -->
+  <rect x="230" y="292" width="52" height="58" rx="18" fill="#F4BF98"/>
+  <path d="M230 304 Q256 322 282 304 L282 294 L230 294 Z" fill="#DD9E77" opacity="0.5"/>
+
+  <!-- Ears -->
+  <ellipse cx="186" cy="232" rx="12" ry="19" fill="#F4BF98" stroke="#C98A63" stroke-width="3"/>
+  <ellipse cx="326" cy="232" rx="12" ry="19" fill="#F4BF98" stroke="#C98A63" stroke-width="3"/>
+
+  <!-- Face -->
+  <path d="M188 206 C188 144, 324 144, 324 206 C324 270, 292 310, 256 310 C220 310, 188 270, 188 206 Z" fill="#FCCBAE" stroke="#C98A63" stroke-width="3.5"/>
+  <!-- Cheerful blush -->
+  <ellipse cx="212" cy="246" rx="17" ry="9" fill="#F87171" opacity="0.32"/>
+  <ellipse cx="300" cy="246" rx="17" ry="9" fill="#F87171" opacity="0.32"/>
+
+  <!-- Happy Laughing Eyes & Brows -->
+  <path d="M210 198 Q225 188 240 196" fill="none" stroke="#222733" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M272 196 Q287 188 302 198" fill="none" stroke="#222733" stroke-width="4.2" stroke-linecap="round"/>
+  <ellipse cx="226" cy="218" rx="9" ry="10.5" fill="#1F2430"/>
+  <ellipse cx="286" cy="218" rx="9" ry="10.5" fill="#1F2430"/>
+  <circle cx="229" cy="214" r="3" fill="#FFFFFF"/>
+  <circle cx="289" cy="214" r="3" fill="#FFFFFF"/>
+
+  <!-- Nose & Expressive Laughing Mouth -->
+  <path d="M254 222 Q260 237 253 242" fill="none" stroke="#C98A63" stroke-width="3" stroke-linecap="round"/>
+  <path d="M230 262 Q256 266 282 262 C278 288, 234 288, 230 262 Z" fill="#DC4C4C" stroke="#A83232" stroke-width="3"/>
+  <path d="M236 264 Q256 270 276 264 Z" fill="#FFFFFF"/>
+
+  <!-- Hair Front & Fabric Headband -->
+  <path d="M182 208 C184 140, 240 120, 286 132 C320 140, 332 174, 330 210 C316 176, 286 158, 256 156 C228 168, 200 184, 182 208 Z" fill="#232836"/>
+  <!-- Fabric Headband -->
+  <path d="M180 182 C202 132, 310 132, 332 182" fill="none" stroke="#F97316" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="286" cy="144" r="11" fill="#FB923C" stroke="#C2410C" stroke-width="2.5"/>
+
+  <!-- Cute Hand Puppet held up on right -->
+  <path d="M352 440 C372 396, 378 368, 376 346" fill="none" stroke="url(#dress16)" stroke-width="36" stroke-linecap="round"/>
+  <g transform="translate(328, 260)">
+    <!-- Puppet felt body (sock/hand puppet) -->
+    <path d="M18 112 L18 52 C18 20, 82 20, 82 52 L82 112 Z" fill="#38BDF8" stroke="#0369A1" stroke-width="3.5"/>
+    <!-- Puppet ears -->
+    <circle cx="26" cy="24" r="12" fill="#38BDF8" stroke="#0369A1" stroke-width="3"/>
+    <circle cx="74" cy="24" r="12" fill="#38BDF8" stroke="#0369A1" stroke-width="3"/>
+    <!-- Puppet eyes & cheerful mouth -->
+    <circle cx="38" cy="46" r="7" fill="#FFFFFF"/><circle cx="39" cy="46" r="3.5" fill="#0F172A"/>
+    <circle cx="62" cy="46" r="7" fill="#FFFFFF"/><circle cx="63" cy="46" r="3.5" fill="#0F172A"/>
+    <path d="M36 66 Q50 78 64 66" fill="#F43F5E" stroke="#9F1239" stroke-width="2.5"/>
+  </g>
+</svg>
