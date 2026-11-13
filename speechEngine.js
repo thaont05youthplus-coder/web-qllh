@@ -298,22 +298,30 @@
             if (typeof fetch !== 'function' || typeof window === 'undefined' || !window.location || !/^https?:/.test(window.location.protocol)) {
                 return null;
             }
-            const res = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: clean,
-                    profile: profile,
-                    lang: item.lang
-                })
-            });
-            if (!res.ok) return null;
-            const contentType = res.headers.get('content-type') || '';
-            if (!contentType.includes('audio')) return null;
-            const blob = await res.blob();
-            const objUrl = URL.createObjectURL(blob);
-            this.dynamicAudioCache[cacheKey] = objUrl;
-            return objUrl;
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timeoutId = controller ? setTimeout(() => controller.abort(), 1400) : null;
+                const res = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: clean,
+                        profile: profile,
+                        lang: item.lang
+                    }),
+                    signal: controller ? controller.signal : undefined
+                });
+                if (timeoutId) clearTimeout(timeoutId);
+                if (!res.ok) return null;
+                const contentType = res.headers.get('content-type') || '';
+                if (!contentType.includes('audio')) return null;
+                const blob = await res.blob();
+                const objUrl = URL.createObjectURL(blob);
+                this.dynamicAudioCache[cacheKey] = objUrl;
+                return objUrl;
+            } catch (err) {
+                return null;
+            }
         },
 
         _speakWithWebSpeech: function (item, token, finishStep) {

@@ -961,8 +961,8 @@
         },
 
         _applyAndSpeakReactions: function (sc, reactions, isPositive) {
-            const speechItems = [];
-            sc.students.forEach(st => {
+            let focalStudent = null;
+            sc.students.forEach((st, idx) => {
                 const react = reactions[st.id];
                 if (!react) return;
 
@@ -978,6 +978,16 @@
                     }
                 }
 
+                // Chọn 1 học sinh tiêu biểu phát biểu để phản hồi trực tiếp, ngắn gọn (1.5-2s)
+                if (!focalStudent) {
+                    focalStudent = { st, react };
+                } else if (isPositive && st.id === 'lan') {
+                    focalStudent = { st, react };
+                }
+            });
+
+            if (focalStudent) {
+                const { st, react } = focalStudent;
                 this.transcriptLog.push({
                     role: 'student',
                     studentId: st.id,
@@ -985,27 +995,23 @@
                     text: react.line,
                     pitch: st.voicePitch,
                     rate: st.voiceRate,
-                    timestampSec: this.sessionElapsedSec + 5
+                    timestampSec: this.sessionElapsedSec + 2
                 });
 
-                speechItems.push({
-                    text: react.line,
-                    speaker: st.name,
-                    gender: st.gender || 'female',
-                    isStudent: true,
-                    forceLang: 'vi-VN',
-                    pitch: st.voicePitch || 1.0,
-                    rate: st.voiceRate || 1.0,
-                    onStart: () => {
-                        if (window.CharacterManager) {
-                            window.CharacterManager.showSpeechBubble(st.id, react.line, 6000, isPositive ? '#10b981' : '#f59e0b');
-                        }
-                    }
-                });
-            });
+                if (window.CharacterManager) {
+                    window.CharacterManager.showSpeechBubble(st.id, react.line, 5000, isPositive ? '#10b981' : '#f59e0b');
+                }
 
-            if (window.SpeechEngine && speechItems.length > 0) {
-                window.SpeechEngine.speakSequence(speechItems);
+                if (window.SpeechEngine) {
+                    window.SpeechEngine.speak(react.line, {
+                        speaker: st.name,
+                        gender: st.gender || 'female',
+                        isStudent: true,
+                        forceLang: 'vi-VN',
+                        pitch: st.voicePitch || 1.0,
+                        rate: st.voiceRate || 1.0
+                    });
+                }
             }
         },
 
@@ -1173,8 +1179,8 @@
 
                 if (!hasSpeech) {
                     passed = false;
-                    quote = '(Chưa có lời nói cụ thể của bạn trong buổi mô phỏng)';
-                    reason = `Chưa đạt đầy đủ — chưa thể hiện đầy đủ yêu cầu tại ${criterion.citation} vì bạn chưa thực hành phát ngôn điều phối lớp học.`;
+                    quote = '(Chưa có lời nói xử lý trực tiếp của bạn trong buổi mô phỏng)';
+                    reason = `Chưa đạt — bạn chưa thực hiện lời nói điều phối để giải quyết tình huống theo chuẩn mực sư phạm.`;
                 } else {
                     const pickWrap = (kws) => {
                         const res = pickQuoteWithTime(kws);
@@ -1185,9 +1191,9 @@
                     passed = evalResult.passed;
                     quote = evalResult.quote;
                     if (passed) {
-                        reason = `${criterion.passDesc} (${criterion.citation})`;
+                        reason = criterion.passDesc;
                     } else {
-                        reason = `Chưa thể hiện đầy đủ yêu cầu tại ${criterion.citation}. ${evalResult.gapDetail}`;
+                        reason = evalResult.gapDetail || criterion.failDesc;
                     }
                 }
                 return { criterionId: cid, criterion, quote, timeStr, passed, reason };
@@ -1361,6 +1367,14 @@
             this.goToFlowStep(5);
         },
 
+        useQuickPrompt: function (text) {
+            if (!text) return;
+            const inputEl = document.getElementById('c3d-speech-input');
+            if (inputEl) inputEl.value = text;
+            this.draftUtterance = text;
+            this.submitTeacherUtterance(text);
+        },
+
         // ================= PUSH-TO-TALK (SPACE) & VOICE BRIDGE =================
         handleSpaceDown: function (e) {
             if (this._spaceHolding || (e && e.repeat)) return false;
@@ -1371,6 +1385,7 @@
             this._spaceHolding = true;
             this._sttTarget = this.flowStep === 1 ? 'step1' : (this.flowStep === 13 ? 'step13' : 'main');
             if (window.SpeechEngine) {
+                if (window.SpeechEngine.stopSpeaking) window.SpeechEngine.stopSpeaking();
                 window.SpeechEngine.startListening('');
             }
             return true;
@@ -1424,6 +1439,7 @@
                     }
                 });
             } else {
+                if (window.SpeechEngine.stopSpeaking) window.SpeechEngine.stopSpeaking();
                 window.SpeechEngine.startListening(existing);
             }
         },
@@ -1762,14 +1778,14 @@
             return `
                 <div class="mp-kicker">CHUẨN BỊ</div>
                 <h1 class="mp-h1">Bạn muốn dạy lớp nào?</h1>
-                <p class="mp-subtitle">Ngôn ngữ, hành vi và trình độ tiếng Anh của học sinh AI thay đổi theo lứa tuổi.</p>
+                <p class="mp-subtitle">Ngôn ngữ, hành vi và đặc điểm tâm lý của học sinh AI thay đổi theo từng lứa tuổi.</p>
 
                 <div class="mp-grade-grid-3">${gradeCards}</div>
 
                 <div class="mp-card mp-class-bar">
                     <span style="font-size:14px; font-weight:700; color:#0f172a;">Khối lớp</span>
                     <div style="display:flex; gap:8px;">${numPills}</div>
-                    <span style="font-size:13.5px; color:#475569;">Độ khó tiếng Anh của học sinh AI bám theo sách Global Success lớp ${this.selectedGradeNumber}.</span>
+                    <span style="font-size:13.5px; color:#475569;">Nội dung và diễn biến tâm lý bám sát lứa tuổi học sinh lớp ${this.selectedGradeNumber}.</span>
                 </div>
 
                 <div class="mp-footer">
@@ -1800,21 +1816,13 @@
             }).join('');
 
             const modeCards = [
-                { id: 'guided', title: 'Luyện tập', desc: 'Được tạm dừng và nhận gợi ý' },
-                { id: 'realistic', title: 'Thử thách', desc: 'Thời gian thực, im lặng quá 7 giây học sinh sẽ tự hành động' }
+                { id: 'guided', title: 'Luyện tập', desc: 'Được tạm dừng và nhận gợi ý xử lý sư phạm' },
+                { id: 'realistic', title: 'Thử thách', desc: 'Thời gian thực, tự xử lý nhanh với học sinh trong lớp' }
             ].map(m => `
                 <div class="mp-card mp-card-selectable ${this.selectedMode === m.id ? 'selected' : ''}" style="padding:14px;"
                      onclick="window.ScenarioSystem.selectMode('${m.id}')">
                     <div style="font-weight:800; font-size:14.5px; color:#0f172a;">${m.title}</div>
                     <div style="font-size:12.5px; color:#64748b; margin-top:4px; line-height:1.45;">${m.desc}</div>
-                </div>
-            `).join('');
-
-            const diffCards = this.difficulties.map(d => `
-                <div class="mp-card mp-card-selectable ${this.selectedDifficulty === d.id ? 'selected' : ''}" style="padding:14px;"
-                     onclick="window.ScenarioSystem.selectDifficulty('${d.id}')">
-                    <div style="font-weight:800; font-size:14.5px; color:#0f172a;">${escapeHtml(d.label)}</div>
-                    <div style="font-size:12.5px; color:#64748b; margin-top:4px;">${escapeHtml(d.desc)}</div>
                 </div>
             `).join('');
 
@@ -1837,14 +1845,10 @@
 
                 <div class="mp-group-grid-5">${groupCards}</div>
 
-                <div class="mp-setup-bottom-2">
+                <div style="margin-top:20px;">
                     <div class="mp-card">
-                        <div style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:10px;">Chế độ</div>
+                        <div style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:10px;">Chế độ thực hành</div>
                         <div class="mp-chip-grid-2">${modeCards}</div>
-                    </div>
-                    <div class="mp-card">
-                        <div style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:10px;">Độ khó</div>
-                        <div class="mp-chip-grid-3">${diffCards}</div>
                     </div>
                 </div>
 
@@ -1883,7 +1887,7 @@
 
             return `
                 <div class="mp-kicker">BỐI CẢNH TIẾT HỌC</div>
-                <h1 class="mp-h1">${escapeHtml(bc.classLabel || sc.grade)} · Tiết Tiếng Anh</h1>
+                <h1 class="mp-h1">${escapeHtml(bc.classLabel || sc.grade)} · Tình huống lớp học</h1>
 
                 <div class="mp-step5-grid" style="margin-top:18px;">
                     <div class="mp-card">
@@ -1894,7 +1898,7 @@
                             </div>
                             <div>
                                 <div style="font-size:11.5px; font-weight:700; color:#64748b; text-transform:uppercase;">THỜI LƯỢNG</div>
-                                <div style="font-size:15px; font-weight:700; color:#0f172a; margin-top:4px;">${escapeHtml(sc.duration)} · Chế độ ${modeLabel} · Độ khó ${escapeHtml(diffObj.label)}</div>
+                                <div style="font-size:15px; font-weight:700; color:#0f172a; margin-top:4px;">${escapeHtml(sc.duration)} · Chế độ ${modeLabel}</div>
                             </div>
                         </div>
                         <div>
@@ -2056,15 +2060,40 @@
                 `;
             }).join('');
 
-            // Cards (Mục c)
-            const lawCardsHtml = report.items.map(it => `
-                <div class="mp-law-item-card ${it.passed ? '' : 'warn'}">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                        <strong style="font-size:13.5px; color:#0f172a;">${escapeHtml(it.criterion.shortRef)} · Luật Nhà giáo 73/2025/QH15</strong>
-                        <span class="${it.passed ? 'mp-badge-ok' : 'mp-badge-warn'}">${it.passed ? 'Đạt' : 'Chưa đạt đầy đủ'}</span>
+            // Cards (Mục c: Nhận xét chi tiết theo Luật Nhà giáo 2025, Thông tư 03/2026 & Chuẩn nghề nghiệp)
+            const lawCardsHtml = report.items.map((it, idx) => `
+                <div class="mp-law-item-card ${it.passed ? '' : 'warn'}" style="padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+                        <strong style="font-size:15px; color:#0f172a;">${idx + 1}. ${escapeHtml(it.criterion.title || it.criterion.name)}</strong>
+                        <span class="${it.passed ? 'mp-badge-ok' : 'mp-badge-warn'}" style="font-size:12px; font-weight:700;">${it.passed ? '✓ Đạt yêu cầu' : '⚠️ Cần cải thiện'}</span>
                     </div>
-                    <div class="mp-quote-pill">${escapeHtml(it.timeStr)} — “${escapeHtml(it.quote)}”</div>
-                    <div style="font-size:13px; color:#475569; line-height:1.5;">${escapeHtml(it.reason)}</div>
+
+                    <div style="background:#f1f5f9; border-radius:8px; padding:8px 12px; font-size:13px; color:#1e293b; display:flex; align-items:center; gap:6px;">
+                        <span style="font-weight:700; color:#2563eb;">💬 Phát ngôn ghi nhận:</span>
+                        <span style="font-style:italic;">${escapeHtml(it.timeStr)} — “${escapeHtml(it.quote)}”</span>
+                    </div>
+
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
+                        <div style="font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:0.4px; font-size:11px; margin-bottom:2px;">
+                            🏛️ Căn cứ pháp lý & Chuẩn mực quy định:
+                        </div>
+                        <div style="line-height:1.5;">
+                            <span style="color:#1d4ed8; font-weight:700;">📜 Luật Nhà giáo số 73/2025/QH15:</span>
+                            <span style="color:#334155;">${escapeHtml(it.criterion.lawDetail || '')}</span>
+                        </div>
+                        <div style="line-height:1.5;">
+                            <span style="color:#059669; font-weight:700;">📋 Thông tư 03/2026/TT-BGDĐT:</span>
+                            <span style="color:#334155;">${escapeHtml(it.criterion.circularDetail || '')}</span>
+                        </div>
+                        <div style="line-height:1.5;">
+                            <span style="color:#7c3aed; font-weight:700;">🏷️ Chuẩn nghề nghiệp giáo viên:</span>
+                            <span style="color:#334155;">${escapeHtml(it.criterion.standardDetail || '')}</span>
+                        </div>
+                    </div>
+
+                    <div style="font-size:13px; line-height:1.55; color:${it.passed ? '#15803d' : '#9a3412'}; background:${it.passed ? '#f0fdf4' : '#fff7ed'}; border:1px solid ${it.passed ? '#bbf7d0' : '#fed7aa'}; border-radius:8px; padding:10px 12px;">
+                        <strong>👉 Hướng dẫn sư phạm:</strong> ${escapeHtml(it.reason)}
+                    </div>
                 </div>
             `).join('');
 
@@ -2338,9 +2367,14 @@
                 ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.goToFlowStep(7)">Tiếp: Tình huống ▶</button>`
                 : (this.flowStep === 7
                     ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.advanceAfterStep7()">${this.selectedMode === 'realistic' ? 'Xử lý ngay (Bước 9) ▶' : 'Nhận diện tình huống (Bước 8) ▶'}</button>`
-                    : (this.selectedMode === 'guided'
-                        ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.requestHintInStep9()">Xin gợi ý</button>`
-                        : `<span id="c3d-silence-badge" class="c3d-pill-dark" style="border-color:#ef4444;color:#fca5a5;">⏳ Thời gian thực (7s)</span>`));
+                    : (this.flowStep === 9
+                        ? `
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${this.selectedMode === 'guided' ? `<button class="c3d-action-btn" style="background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25);" onclick="window.ScenarioSystem.requestHintInStep9()" title="Xem gợi ý xử lý sư phạm">💡 Gợi ý</button>` : ''}
+                                <button class="c3d-action-btn" style="background:#16a34a; border-color:#22c55e; font-weight:800; box-shadow:0 0 12px rgba(34,197,94,0.4);" onclick="window.ScenarioSystem.finishPracticePhase()" title="Kết thúc buổi luyện để nhận xét theo Luật Nhà giáo 2025">Hoàn thành buổi luyện ▶</button>
+                            </div>
+                        `
+                        : `<button class="c3d-action-btn" style="background:#16a34a; border-color:#22c55e;" onclick="window.ScenarioSystem.finishPracticePhase()">Hoàn thành ▶</button>`));
 
             const centerBannerHtml = (!isModalOverlayStep && this.hintBannerText) ? `
                 <div class="c3d-center-banner">
@@ -2365,7 +2399,7 @@
                     <div style="display:flex; align-items:center; gap:8px;">
                         <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ClassroomGame && window.ClassroomGame.openSettings && window.ClassroomGame.openSettings()" title="Cài đặt hiển thị (Phím O)">⚙️</button>
                         ${this.selectedMode === 'guided' && !isModalOverlayStep ? `<button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.togglePracticePause()">${this.isPaused ? '▶ Tiếp' : '⏸'}</button>` : ''}
-                        <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.finishPracticePhase()">Kết thúc</button>
+                        <button class="c3d-pill-dark" style="cursor:pointer; background:#15803d; border-color:#22c55e;" onclick="window.ScenarioSystem.finishPracticePhase()">Hoàn thành</button>
                     </div>
                 </div>
 
@@ -2379,20 +2413,26 @@
                             <button id="c3d-mic-btn" class="c3d-mic-btn ${listening ? 'listening' : ''}" onclick="window.ScenarioSystem.toggleMic('main')" title="Bật/Tắt Micro (Hoặc giữ Space)">🎙️</button>
                             <div style="display:flex; flex-direction:column;">
                                 <span id="c3d-mic-label" style="font-size:12.5px; font-weight:700; color:#e2e8f0;">${listening ? 'Đang nghe bạn nói...' : 'Giữ Space để nói'}</span>
-                                <button onclick="window.ScenarioSystem.toggleSttLang()" style="background:none;border:none;color:#7dd3fc;font-size:11px;padding:0;text-align:left;cursor:pointer;">
-                                    🌐 ${curLang === 'en-US' ? 'English (en-US)' : 'Tiếng Việt (vi-VN)'}
-                                </button>
+                                <span style="font-size:11px; color:#94a3b8;">Tiếng Việt (vi-VN)</span>
                             </div>
                             <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại mở đầu & đối thoại học sinh">↺ Nghe lại</button>
                         </div>
 
-                        <div class="c3d-speech-bar">
-                            <input id="c3d-speech-input" type="text" class="c3d-speech-input"
-                                value="${escapeHtml(this.draftUtterance)}"
-                                placeholder="${lastLog ? `${escapeHtml(lastLog.speaker)}: ${escapeHtml(lastLog.text.slice(0, 68))}` : 'Nói bằng Space hoặc nhập câu xử lý sư phạm (Enter để gửi)...'}"
-                                onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ScenarioSystem.submitTeacherUtterance(); }">
-                            <button class="c3d-pill-dark" style="background:#2563eb;border-color:#38bdf8;cursor:pointer;"
-                                onclick="window.ScenarioSystem.submitTeacherUtterance()">Gửi</button>
+                        <div class="c3d-speech-bar" style="display:flex; flex-direction:column; gap:4px; flex:1; max-width:680px;">
+                            <div class="c3d-quick-chips">
+                                <span style="font-size:11px; color:#94a3b8; font-weight:700;">💬 Nói nhanh câu mẫu:</span>
+                                <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Chào cả lớp, cô mời nhóm bạn Huy trình bày ý kiến trước nhé!')">1. Gọi nhóm Huy</button>
+                                <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Nam và Lan cứ bình tĩnh chuẩn bị, cô cho các em thêm 1 phút nhé!')">2. Động viên Lan & Nam</button>
+                                <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Cả lớp cùng lắng nghe và hỗ trợ ý kiến của bạn nào!')">3. Điều phối cả lớp</button>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                                <input id="c3d-speech-input" type="text" class="c3d-speech-input" style="flex:1;"
+                                    value="${escapeHtml(this.draftUtterance)}"
+                                    placeholder="${lastLog ? `${escapeHtml(lastLog.speaker)}: ${escapeHtml(lastLog.text.slice(0, 68))}` : 'Nói bằng Space hoặc nhập câu xử lý sư phạm (Enter để gửi)...'}"
+                                    onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ScenarioSystem.submitTeacherUtterance(); }">
+                                <button class="c3d-pill-dark" style="background:#2563eb;border-color:#38bdf8;cursor:pointer;white-space:nowrap;"
+                                    onclick="window.ScenarioSystem.submitTeacherUtterance()">Gửi</button>
+                            </div>
                         </div>
 
                         ${rightDockBtn}

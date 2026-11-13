@@ -4,71 +4,87 @@
 (function () {
     'use strict';
 
-    // Bộ 8 tiêu chí chung kết hợp Luật Nhà giáo số 73/2025/QH15, Thông tư 03/2026/TT-BGDĐT & Chuẩn nghề nghiệp giáo viên phổ thông
+    // Bộ 8 tiêu chí chuẩn mực kết hợp Luật Nhà giáo số 73/2025/QH15, Thông tư 03/2026/TT-BGDĐT & Chuẩn nghề nghiệp giáo viên
     const LAW_2025_CRITERIA = {
         1: {
             id: 1,
             name: 'Tổ chức giảng dạy có chất lượng',
-            citation: 'Điều 7 k2.a, Điều 9 k2.a Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 4); Chuẩn NNGV (Tiêu chuẩn 2, Điều 9/12/15)',
-            shortRef: 'Luật Nhà giáo Đ9 k2.a & Chuẩn NNGV',
-            passDesc: 'Hoạt động đi đúng mục tiêu tiết học, bảo đảm tiến độ và chất lượng sư phạm theo chuẩn nghề nghiệp.',
-            failDesc: 'Mục tiêu bài bị bỏ dở, lớp mất nhiều thời gian hoặc giáo viên chểnh mảng không duy trì tiến trình bài học.'
+            title: 'Tổ chức giảng dạy & quản lý tiến trình lớp học',
+            lawDetail: 'Điều 7 khoản 2 điểm a (quyền tự chủ chuyên môn); Điều 9 khoản 2 điểm a (bảo đảm chất lượng hoạt động nghề nghiệp).',
+            circularDetail: 'Điều 4 (Quy tắc ứng xử chung: Chuẩn mực, trách nhiệm, giữ gìn trật tự và không khí sư phạm tích cực).',
+            standardDetail: 'Tiêu chuẩn 2 (Phát triển chuyên môn, nghiệp vụ: Xây dựng kế hoạch dạy học và tổ chức hoạt động phát triển năng lực học sinh).',
+            passDesc: 'Hoạt động đi đúng mục tiêu tiết học, quản lý thời gian hiệu quả và duy trì nhịp học tập tích cực cho học sinh.',
+            failDesc: 'Mục tiêu bài bị bỏ dở, lớp mất nhiều thời gian vì xử lý lúng túng hoặc chưa bao quát được tiến độ học tập.'
         },
         2: {
             id: 2,
             name: 'Tôn trọng, công bằng với người học',
-            citation: 'Điều 8 k2.a, Điều 9 k2.d, Điều 11 k2.a Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 5 k1: Tôn trọng sự khác biệt, không định kiến phân biệt đối xử)',
-            shortRef: 'Luật Nhà giáo Đ8 k2.a, Đ9 k2.d & TT 03/2026 Đ5',
-            passDesc: 'Ngôn từ tôn trọng, bao dung; trao cơ hội học tập công bằng cho mọi học sinh, không định kiến hay trù dập.',
-            failDesc: 'Xúc phạm nhân phẩm, chế giễu, làm bẽ mặt trước lớp hoặc phân biệt đối xử giữa các học sinh.'
+            title: 'Tôn trọng nhân cách và đối xử công bằng với người học',
+            lawDetail: 'Điều 8 khoản 2 điểm a (nghĩa vụ tôn trọng nhân cách người học); Điều 9 khoản 2 điểm d (nghiêm cấm phân biệt đối xử, xúc phạm); Điều 11 khoản 2 điểm a.',
+            circularDetail: 'Điều 5 khoản 1 (Ứng xử với người học: Tôn trọng sự khác biệt về thể chất, tâm lý, năng lực; bao dung, lắng nghe, không định kiến).',
+            standardDetail: 'Tiêu chuẩn 4 (Xây dựng môi trường giáo dục an toàn, dân chủ, bình đẳng, không bạo lực học đường).',
+            passDesc: 'Ngôn từ tôn trọng, bao dung; trao cơ hội phát biểu công bằng cho mọi học sinh, không chế giễu hay trù dập.',
+            failDesc: 'Xúc phạm nhân phẩm, chế giễu học sinh trước lớp, thiên vị hoặc chỉ chú ý đến học sinh khá giỏi mà bỏ quên học sinh khác.'
         },
         3: {
             id: 3,
             name: 'Phát huy phẩm chất, năng lực người học',
-            citation: 'Điều 7 k1, Điều 9 k2.c Luật Nhà giáo số 73/2025/QH15; Chuẩn NNGV (Tiêu chí 4 & 5: Dạy học phân hóa, phát triển năng lực)',
-            shortRef: 'Luật Nhà giáo Đ9 k2.c & Chuẩn NNGV Dạy học phân hóa',
-            passDesc: 'Dạy học phân hóa và cấp giàn giáo phù hợp: học sinh giỏi có nhiệm vụ mở rộng, học sinh gặp khó khăn có bậc thang hỗ trợ để tiến bộ.',
-            failDesc: 'Áp dụng cào bằng một mức yêu cầu, bỏ mặc học sinh đuối sức hoặc dập tắt sự hứng thú của học sinh nổi trội.'
+            title: 'Dạy học phân hóa & phát huy năng lực từng học sinh',
+            lawDetail: 'Điều 7 khoản 1 (vai trò nòng cốt phát triển người học); Điều 9 khoản 2 điểm c (tạo cơ hội phát triển phẩm chất, năng lực).',
+            circularDetail: 'Điều 5 khoản 2 (Khuyến khích, động viên học sinh tự tin, phát huy tối đa tiềm năng và sở trường cá nhân).',
+            standardDetail: 'Tiêu chuẩn 2, Tiêu chí 4 & 5 (Dạy học phân hóa: Giao nhiệm vụ mở rộng cho học sinh khá, cấp giàn giáo hỗ trợ học sinh gặp khó khăn).',
+            passDesc: 'Cấp giàn giáo vừa sức: học sinh khá giỏi được thử thách mở rộng, học sinh gặp khó khăn có bậc thang hỗ trợ để tự tin tiến bộ.',
+            failDesc: 'Áp dụng cào bằng một mức yêu cầu, bỏ mặc học sinh đuối sức hoặc dập tắt sự hứng thú học tập của học sinh nổi trội.'
         },
         4: {
             id: 4,
             name: 'Mẫu mực, nêu gương',
-            citation: 'Điều 8 k2.a, Điều 9 k2.b Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 4: Chuẩn mực, gương mẫu, bao dung); Chuẩn NNGV (Điều 6 Đạo đức nhà giáo)',
-            shortRef: 'Luật Nhà giáo Đ8 k2, Đ9 k2.b & TT 03/2026 Đ4',
-            passDesc: 'Giữ thái độ điềm tĩnh, tác phong đĩnh đạc, ngôn ngữ mô phạm chuẩn mực làm gương cho học sinh noi theo.',
-            failDesc: 'Nóng nảy, mất kiểm soát cảm xúc, to tiếng mỉa mai hoặc sa vào tranh cãi tay đôi với học sinh trước lớp.'
+            title: 'Tác phong mẫu mực, làm gương & kiểm soát cảm xúc',
+            lawDetail: 'Điều 8 khoản 2 điểm a (gương mẫu thực hiện chuẩn mực đạo đức); Điều 9 khoản 2 điểm b (giữ gìn uy tín, hình ảnh nhà giáo).',
+            circularDetail: 'Điều 4 (Chuẩn mực đạo đức và lối sống: Giữ gìn thái độ điềm tĩnh, tác phong đĩnh đạc, ngôn ngữ mô phạm chuẩn mực).',
+            standardDetail: 'Điều 6 Thông tư Chuẩn nghề nghiệp giáo viên (Phẩm chất đạo đức nhà giáo: Yêu thương, công bằng, mẫu mực trước học sinh).',
+            passDesc: 'Bình tĩnh, kiểm soát tốt cảm xúc cá nhân, ngôn ngữ mô phạm chuẩn mực, xử lý tình huống thuyết phục làm gương cho học sinh.',
+            failDesc: 'Nóng nảy, mất bình tĩnh, lớn tiếng quát tháo, mỉa mai hoặc tranh cãi tay đôi làm mất uy tín người thầy trước lớp.'
         },
         5: {
             id: 5,
             name: 'Môi trường giáo dục an toàn, dân chủ',
-            citation: 'Điều 9 k2.e, Điều 35 k3 Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 5 k3: Bảo đảm an toàn thể chất và tinh thần); Chuẩn NNGV (Tiêu chuẩn 4: Môi trường an toàn, thân thiện)',
-            shortRef: 'Luật Nhà giáo Đ9 k2.e, Đ35 k3 & TT 03/2026 Đ5 k3',
-            passDesc: 'Xây dựng không khí học tập an toàn tâm lý: học sinh dám hỏi, dám sai để học, được bảo vệ khi bị bạn bè trêu chọc.',
-            failDesc: 'Để học sinh sợ hãi, co cụm, bị bạn chế giễu hoặc bị cô lập trong lớp học mà không có biện pháp bảo vệ kịp thời.'
+            title: 'Xây dựng môi trường học tập an toàn tâm lý & dân chủ',
+            lawDetail: 'Điều 9 khoản 2 điểm e; Điều 35 khoản 3 (trách nhiệm bảo vệ an toàn thể chất và tinh thần cho người học trong cơ sở giáo dục).',
+            circularDetail: 'Điều 5 khoản 3 (Bảo đảm an toàn tâm lý và thể chất: Ngăn chặn kịp thời hành vi chế giễu, trêu chọc, bạo lực học đường).',
+            standardDetail: 'Tiêu chuẩn 4, Tiêu chí 8 (Xây dựng môi trường học đường tích cực: Học sinh dám nói, dám hỏi, dám sai để tiến bộ mà không sợ bị chê cười).',
+            passDesc: 'Tạo không khí học tập an toàn tâm lý: học sinh dám hỏi, dám mắc lỗi để học, kịp thời ngăn chặn tiếng cười nhạo và bảo vệ học sinh bị trêu.',
+            failDesc: 'Để học sinh co cụm, sợ hãi, xấu hổ trước bạn bè, bị bạn chế giễu mà giáo viên không có biện pháp can thiệp, bảo vệ kịp thời.'
         },
         6: {
             id: 6,
             name: 'Áp dụng khoa học giáo dục',
-            citation: 'Điều 7 k1, Điều 9 k2.đ Luật Nhà giáo số 73/2025/QH15; Chuẩn NNGV (Tiêu chuẩn 2: Phương pháp dạy học và giáo dục tích cực)',
-            shortRef: 'Luật Nhà giáo Đ9 k2.đ & Chuẩn NNGV Phương pháp tích cực',
-            passDesc: 'Vận dụng phương pháp giáo dục tích cực có cơ sở khoa học (làm mẫu trực quan, câu hỏi kiểm tra mức độ hiểu ICQs, thời gian chờ suy nghĩ Think-time).',
-            failDesc: 'Điều hành theo cảm tính, lặp lại mệnh lệnh đã không hiệu quả hoặc thiếu kỹ thuật sư phạm cơ bản.'
+            title: 'Vận dụng phương pháp giáo dục tích cực có cơ sở khoa học',
+            lawDetail: 'Điều 7 khoản 1; Điều 9 khoản 2 điểm đ (áp dụng đúng quy trình chuyên môn và khoa học giáo dục).',
+            circularDetail: 'Điều 4 (Nâng cao tính chuyên nghiệp, sư phạm và hiệu quả trong hoạt động dạy học).',
+            standardDetail: 'Tiêu chuẩn 2 (Phương pháp dạy học và giáo dục tích cực: Làm mẫu trực quan, câu hỏi kiểm tra mức độ hiểu ICQs, thời gian chờ suy nghĩ Think-time).',
+            passDesc: 'Áp dụng kỹ thuật sư phạm bài bản (làm mẫu trực quan, kiểm tra mức độ hiểu bằng câu hỏi ngắn, cho thời gian chuẩn bị trước khi gọi).',
+            failDesc: 'Điều hành lớp theo cảm tính, lặp lại chỉ dẫn chung chung đã không hiệu quả hoặc thiếu kỹ thuật sư phạm cơ bản.'
         },
         7: {
             id: 7,
             name: 'Nhận xét, xử lý kỷ luật tích cực đúng quy định',
-            citation: 'Điều 8 k2.a Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 5 k4: Kỷ luật tích cực, giáo dục bằng lòng nhân ái); Điều 3/4/5 Nhiệm vụ giáo viên',
-            shortRef: 'Luật Nhà giáo Đ8 k2.a & TT 03/2026 Đ5 k4 Kỷ luật tích cực',
-            passDesc: 'Xử lý hành vi dựa trên nội quy lớp học đã thống nhất, dùng biện pháp kỷ luật tích cực nhằm giáo dục uốn nắn thay vì trừng phạt.',
-            failDesc: 'Tự đặt ra hình phạt ngoài quy định, bêu tên phạt đứng góc hoặc tịch thu tài sản trái phép.'
+            title: 'Kỷ luật tích cực & xử lý hành vi dựa trên nội quy lớp học',
+            lawDetail: 'Điều 8 khoản 2 điểm a (xử lý người học đúng quy định pháp luật); Điều 9 khoản 2 điểm a (nghiêm cấm mọi hình thức nhục phạt).',
+            circularDetail: 'Điều 5 khoản 4 (Kỷ luật tích cực: Giáo dục bằng sự bao dung, phân tích lẽ phải, tôn trọng quyền và nhân phẩm học sinh).',
+            standardDetail: 'Điều 3, 4, 5 (Nhiệm vụ giáo viên: Quản lý học sinh bằng biện pháp kỷ luật tích cực theo quy định của Bộ Giáo dục và Đào tạo).',
+            passDesc: 'Nhắc nhở kín đáo dựa trên nội quy lớp đã thống nhất; hướng dẫn học sinh sửa sai bằng tinh thần kỷ luật tích cực, không bẽ mặt.',
+            failDesc: 'Tự đặt ra hình phạt ngoài quy định, bêu tên phạt đứng trước lớp hoặc tịch thu tài sản trái phép làm căng thẳng hóa sự việc.'
         },
         8: {
             id: 8,
-            name: 'Tự đánh giá và nâng cao năng lực nghề nghiệp',
-            citation: 'Điều 13 k4 Luật Nhà giáo số 73/2025/QH15; Chuẩn NNGV (Tiêu chuẩn 1, Tiêu chí 2: Tự học, tự bồi dưỡng phát triển chuyên môn)',
-            shortRef: 'Luật Nhà giáo Điều 13 khoản 4 & Chuẩn NNGV',
-            passDesc: 'Tự phản tư sâu sắc sau buổi dạy: chỉ rõ hành động đã làm tốt, điểm hạn chế theo quy định pháp luật và phương án cải thiện cụ thể.',
-            failDesc: 'Tự nhận xét qua loa, hình thức hoặc không nhận ra mối liên hệ giữa hành vi xử lý sư phạm với quyền lợi của học sinh.'
+            name: 'Tự đánh giá sau buổi luyện',
+            title: 'Tự phản tư và nâng cao năng lực nghề nghiệp nhà giáo',
+            lawDetail: 'Điều 13 khoản 4 (nghĩa vụ tự học, tự bồi dưỡng, tự đánh giá nâng cao năng lực nghề nghiệp theo chuẩn nghề nghiệp nhà giáo).',
+            circularDetail: 'Điều 4 (Ý thức tự hoàn thiện nhân cách, kỹ năng nghề nghiệp và trách nhiệm nghề nghiệp).',
+            standardDetail: 'Tiêu chuẩn 1, Tiêu chí 2 (Tự học, tự rèn luyện, tự đánh giá để nâng cao năng lực sư phạm và chuyên môn).',
+            passDesc: 'Tự phản tư sâu sắc: nhận diện rõ hành vi đã làm tốt, điểm hạn chế theo quy định pháp luật và có kế hoạch điều chỉnh cụ thể.',
+            failDesc: 'Tự đánh giá qua loa, hình thức, không nhận diện được tác động từ lời nói và hành vi sư phạm của mình tới học sinh.'
         }
     };
 
