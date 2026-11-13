@@ -375,6 +375,16 @@
             }
         },
 
+        stopAllSpeaking: function () {
+            this.characters.forEach(ch => {
+                ch.isSpeaking = false;
+                ch.speakingUntil = 0;
+                if (ch.mouthMesh) {
+                    ch.mouthMesh.scale.set(1, 1, 1);
+                }
+            });
+        },
+
         getActiveStudents: function () {
             return this.characters.filter(ch => ch.type === 'student');
         },

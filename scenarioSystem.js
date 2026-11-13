@@ -361,6 +361,9 @@
             // Quản lý đồng hồ đếm thời gian lớp học
             if (target === 6 || target === 7 || target === 9) {
                 this.isPaused = false;
+                if (window.ClassroomGame && window.ClassroomGame.setPaused) {
+                    window.ClassroomGame.setPaused(false);
+                }
                 this._startClassTimer();
             } else {
                 this._stopClassTimer();
@@ -1187,6 +1190,29 @@
         togglePracticePause: function () {
             if (this.selectedMode === 'realistic') return;
             this.isPaused = !this.isPaused;
+            if (this.isPaused) {
+                // 1. Dừng ngay toàn bộ phát âm thanh và giọng nói học sinh/giáo viên
+                if (window.SpeechEngine) {
+                    window.SpeechEngine.stopSpeaking();
+                    if (window.SpeechEngine.isListening) {
+                        window.SpeechEngine.stopListening();
+                    }
+                }
+                // 2. Dừng cử động khẩu hình và ẩn bong bóng thoại
+                if (window.CharacterManager) {
+                    if (window.CharacterManager.stopAllSpeaking) window.CharacterManager.stopAllSpeaking();
+                    if (window.CharacterManager.hideAllSpeechBubbles) window.CharacterManager.hideAllSpeechBubbles();
+                }
+                // 3. Đóng băng Three.js (quạt trần, đồng hồ, vật lý nhân vật)
+                if (window.ClassroomGame && window.ClassroomGame.setPaused) {
+                    window.ClassroomGame.setPaused(true);
+                }
+            } else {
+                // Bật lại hoạt họa Three.js khi tiếp tục
+                if (window.ClassroomGame && window.ClassroomGame.setPaused) {
+                    window.ClassroomGame.setPaused(false);
+                }
+            }
             this.renderInClassHud();
         },
 
@@ -2547,6 +2573,31 @@
                         <button class="c3d-pill-dark" style="cursor:pointer; background:#15803d; border-color:#22c55e;" onclick="window.ScenarioSystem.finishPracticePhase()">Hoàn thành</button>
                     </div>
                 </div>
+
+                ${(this.isPaused && !isModalOverlayStep) ? `
+                    <div class="c3d-pause-overlay">
+                        <div class="c3d-pause-card">
+                            <div class="c3d-pause-icon">⏸️</div>
+                            <h2 class="c3d-pause-title">BUỔI LUYỆN ĐÃ TẠM DỪNG</h2>
+                            <p class="c3d-pause-desc">
+                                Thời gian buổi luyện, hoạt họa lớp học và phản ứng của học sinh đã được đóng băng.<br>
+                                Thầy/cô có thể thư giãn, chuẩn bị phương án hoặc xem lại bối cảnh trước khi tiếp tục.
+                            </p>
+                            <div class="c3d-pause-stat">
+                                <span class="c3d-pause-stat-badge">⏱ Thời gian: <strong>${formatClock(this.sessionElapsedSec)}</strong> / ${formatClock(this.sessionDurationSec)}</span>
+                                <span class="c3d-pause-stat-badge">💬 Lượt đối thoại: <strong>${this.transcriptLog.length}</strong></span>
+                            </div>
+                            <div class="c3d-pause-actions">
+                                <button class="c3d-pause-btn-primary" onclick="window.ScenarioSystem.togglePracticePause()">
+                                    ▶ Tiếp tục buổi luyện
+                                </button>
+                                <button class="c3d-pause-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(5)">
+                                    ⬅ Xem lại bối cảnh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
 
                 ${!isModalOverlayStep ? `
                     <div class="c3d-middle">

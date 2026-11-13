@@ -1085,6 +1085,18 @@
             return;
         }
 
+        // Nếu buổi luyện đang tạm dừng, chặn di chuyển và phím hành động (chỉ cho phép phím P hoặc Space tiếp tục)
+        const isPausedSim = (window.ClassroomGame && window.ClassroomGame.isPaused) || (window.ScenarioSystem && window.ScenarioSystem.isPaused);
+        if (isPausedSim) {
+            if (e.code === 'KeyP') {
+                if (window.ScenarioSystem && window.ScenarioSystem.togglePracticePause) {
+                    e.preventDefault();
+                    window.ScenarioSystem.togglePracticePause();
+                }
+            }
+            return;
+        }
+
         switch (e.code) {
             case 'KeyW':
             case 'ArrowUp':
@@ -1821,6 +1833,21 @@
             const dx = player.position.x - targetVec.x;
             const dz = player.position.z - targetVec.z;
             return Math.sqrt(dx * dx + dz * dz);
+        },
+
+        isPaused: false,
+
+        setPaused: function (paused) {
+            this.isPaused = Boolean(paused);
+            if (this.isPaused) {
+                // Hủy phím bấm và vận tốc đang chuyển động để không bị trôi nhân vật
+                keys.forward = false;
+                keys.backward = false;
+                keys.left = false;
+                keys.right = false;
+                keys.sprint = false;
+                player.velocity.set(0, 0, 0);
+            }
         }
     };
 
@@ -1829,6 +1856,14 @@
         requestAnimationFrame(animate);
 
         const delta = clock.getDelta();
+
+        // Kiểm tra đóng băng mô phỏng khi Tạm dừng
+        const isSimulationPaused = (window.ClassroomGame && window.ClassroomGame.isPaused) || (window.ScenarioSystem && window.ScenarioSystem.isPaused);
+        if (isSimulationPaused) {
+            // Vẫn vẽ scene tĩnh để không giật nháy màn hình, nhưng đóng băng quạt trần, đồng hồ, vật lý và cử động
+            renderer.render(scene, camera);
+            return;
+        }
 
         // Đo FPS
         frameCount++;
