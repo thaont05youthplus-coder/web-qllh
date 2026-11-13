@@ -156,6 +156,7 @@
         proximityToKhoa: null,
         studentParticipation: {},
         draftUtterance: '',
+        showManualTextInput: false,
 
         // Bước 11–14
         selfEvalScore: 4,
@@ -295,13 +296,32 @@
                 if (statusEl) {
                     statusEl.textContent = interimText ? `Đang nghe: "${interimText}"` : combined;
                 }
+                const liveVoiceEl = document.getElementById('c3d-voice-live-text');
+                if (liveVoiceEl && combined) {
+                    liveVoiceEl.textContent = combined;
+                }
             };
 
             window.SpeechEngine.onSttStateChange = (listening) => {
                 const btnMain = document.getElementById('c3d-mic-btn');
-                if (btnMain) btnMain.classList.toggle('listening', listening);
-                const labelEl = document.getElementById('c3d-mic-label');
-                if (labelEl) labelEl.textContent = listening ? 'Đang nghe bạn nói...' : 'Giữ Space để nói';
+                if (btnMain) {
+                    btnMain.classList.toggle('listening', listening);
+                    const iconEl = btnMain.querySelector('.c3d-mic-icon');
+                    const textEl = btnMain.querySelector('.c3d-mic-text');
+                    if (iconEl) iconEl.textContent = listening ? '⏹' : '🎙️';
+                    if (textEl) textEl.textContent = listening ? 'Dừng & Gửi' : 'Nói (Space)';
+                }
+                const waveEl = document.querySelector('.c3d-voice-wave');
+                if (waveEl) waveEl.classList.toggle('active', listening);
+                const avatarWrap = document.querySelector('.c3d-teacher-avatar-wrapper');
+                if (avatarWrap) avatarWrap.classList.toggle('speaking', listening);
+                const statusEl = document.querySelector('.c3d-teacher-status');
+                if (statusEl) {
+                    statusEl.textContent = listening ? '🔴 Đang mấp máy nói...' : 'Giáo viên';
+                    statusEl.classList.toggle('speaking', listening);
+                }
+                const bubbleEl = document.querySelector('.c3d-voice-bubble-display');
+                if (bubbleEl) bubbleEl.classList.toggle('active', listening);
 
                 if (this.flowStep === 1 || this.flowStep === 13) {
                     this.renderFlowWizard();
@@ -934,26 +954,134 @@
             return text.length > 75 && this.achievedCheckpoints.length >= 2;
         },
 
+        // Sinh lời thoại học sinh chân thực, gắn liền với phản hồi của giáo viên (không nhai lại kịch bản cũ)
+        _generateContextualStudentResponse: function (sc, text, matchedCps) {
+            const lower = (text || '').toLowerCase();
+            const sid = sc.id;
+
+            // 1. Nhận diện học sinh được nhắc tên trực tiếp
+            let targetStudent = sc.students.find(st => matchesKeyword(lower, st.name.toLowerCase()));
+
+            // Nếu không gọi tên ai, chọn học sinh phù hợp với ngữ cảnh xử lý của giáo viên
+            if (!targetStudent) {
+                if (sid === 2) {
+                    if (lower.includes('nhường') || lower.includes('thư ký') || lower.includes('từ từ') || lower.includes('lắng nghe') || lower.includes('ghi chép')) {
+                        targetStudent = sc.students.find(s => s.id === 'huy');
+                    } else if (lower.includes('bình tĩnh') || lower.includes('suy nghĩ') || lower.includes('1 phút') || lower.includes('thời gian') || lower.includes('tự tin') || lower.includes('ngại')) {
+                        targetStudent = sc.students.find(s => s.id === 'lan') || sc.students.find(s => s.id === 'nam');
+                    } else if (lower.includes('nam') || lower.includes('chia sẻ')) {
+                        targetStudent = sc.students.find(s => s.id === 'nam');
+                    } else {
+                        targetStudent = sc.students.find(s => s.id === 'huy') || sc.students[0];
+                    }
+                } else if (sid === 1) {
+                    targetStudent = sc.students.find(s => s.id === 'bin') || sc.students[0];
+                } else if (sid === 3) {
+                    targetStudent = sc.students.find(s => s.id === 'khoa') || sc.students[0];
+                } else if (sid === 4) {
+                    targetStudent = (lower.includes('mở rộng') || lower.includes('thêm'))
+                        ? sc.students.find(s => s.id === 'mai')
+                        : (sc.students.find(s => s.id === 'tuan') || sc.students[0]);
+                } else if (sid === 5) {
+                    targetStudent = (lower.includes('trật tự') || lower.includes('nhại'))
+                        ? sc.students.find(s => s.id === 'quan')
+                        : (sc.students.find(s => s.id === 'thao') || sc.students[0]);
+                } else {
+                    targetStudent = sc.students[0];
+                }
+            }
+
+            let line = '';
+            let posture = 'happy_task';
+            let statusTag = 'hợp tác';
+
+            // Sinh câu phản hồi tương ứng theo kịch bản và câu nói của giáo viên
+            if (sid === 2) { // Lớp 7 - Lối sống lành mạnh (Huy, Lan, Nam)
+                if (targetStudent.id === 'huy') {
+                    if (lower.includes('nhường') || lower.includes('thư ký') || lower.includes('ghi chép') || lower.includes('nghe')) {
+                        line = 'Dạ vâng cô! Em xin phép làm thư ký ghi lại ý kiến của nhóm để nhường lượt cho Lan và Nam ạ!';
+                        posture = 'happy_task';
+                        statusTag = 'làm thư ký nhóm';
+                    } else if (lower.includes('khen') || lower.includes('tốt') || lower.includes('giỏi') || lower.includes('ok')) {
+                        line = 'Dạ em cảm ơn cô! Em xin phép hỗ trợ bạn Nam và bạn Lan cùng phát biểu với nhóm ạ!';
+                        posture = 'happy_task';
+                        statusTag = 'hỗ trợ nhóm';
+                    } else {
+                        line = 'Dạ thưa cô, nhóm em thống nhất là muốn khỏe mạnh thì cần kết hợp cả ăn nhiều rau xanh và rèn luyện thể thao ạ!';
+                        posture = 'speaking_pair';
+                        statusTag = 'phát biểu';
+                    }
+                } else if (targetStudent.id === 'lan') {
+                    line = 'Dạ... nhờ cô cho thêm thời gian suy nghĩ nên em đỡ ngại rồi ạ. Thói quen của em là uống đủ 2 lít nước mỗi ngày và đi bộ buổi sáng ạ!';
+                    posture = 'speaking_pair';
+                    statusTag = 'tự tin phát biểu';
+                } else { // nam
+                    line = 'Dạ em cảm ơn cô đã động viên! Em thường đi ngủ sớm trước 10 giờ để sáng mai đi học không bị mệt mỏi ạ!';
+                    posture = 'speaking_pair';
+                    statusTag = 'chia sẻ thói quen';
+                }
+            } else if (sid === 1) { // Lớp 4 (Bin, Na, Tí)
+                if (targetStudent.id === 'bin') {
+                    line = 'Dạ vâng cô! Em về bàn ngay ạ, em sẽ làm bạn bấm giờ 3 phút và cùng bạn Na hoàn thành bảng sở thích!';
+                    posture = 'happy_task';
+                    statusTag = 'bấm giờ cho nhóm';
+                } else {
+                    line = 'Dạ em cảm ơn cô! Nhóm chúng em đã thảo luận xong câu hỏi về sở thích đọc sách và vẽ tranh rồi ạ!';
+                    posture = 'speaking_pair';
+                    statusTag = 'trình bày';
+                }
+            } else if (sid === 3) { // Lớp 10 (Khoa)
+                line = 'Dạ em xin lỗi thầy/cô! Em cất điện thoại vào cặp ngay và tập trung ghi chép bài học ạ.';
+                posture = 'writing';
+                statusTag = 'cất máy, ghi bài';
+            } else if (sid === 4) { // Lớp 11 (Mai, Tuấn, Linh)
+                if (targetStudent.id === 'mai') {
+                    line = 'Dạ vâng cô, em sẽ viết thêm phần phản biện và mở rộng góc nhìn nghề nghiệp như cô hướng dẫn ạ!';
+                    posture = 'writing';
+                    statusTag = 'viết mở rộng';
+                } else {
+                    line = 'Dạ có câu hỏi gợi ý của cô em đã hiểu đề và viết xong câu mở đoạn rồi ạ!';
+                    posture = 'writing';
+                    statusTag = 'đang làm bài';
+                }
+            } else if (sid === 5) { // Lớp 8 (Thảo, Quân, Hà)
+                if (targetStudent.id === 'quan') {
+                    line = 'Dạ em xin lỗi cô và bạn Thảo! Từ giờ em sẽ trật tự và chú ý lắng nghe bạn đọc bài ạ.';
+                    posture = 'attentive';
+                    statusTag = 'chú ý lắng nghe';
+                } else {
+                    line = 'Dạ... em cảm ơn cô đã bảo vệ và động viên em. Em xin phép đọc tiếp đoạn văn: Trước mắt chúng tôi là cánh đồng lúa chín ngút ngát mênh mông...';
+                    posture = 'speaking_pair';
+                    statusTag = 'tự tin đọc tiếp';
+                }
+            } else {
+                line = 'Dạ thưa thầy/cô, chúng em đã nắm rõ hướng dẫn và đang tích cực hoàn thành bài học ạ!';
+                posture = 'speaking_pair';
+                statusTag = 'hợp tác';
+            }
+
+            return { targetStudent, line, posture, statusTag };
+        },
+
         _buildPartialReactions: function (sc, matchedCps, text) {
             const out = {};
-            const difficulty = this.selectedDifficulty;
-            sc.students.forEach((st, idx) => {
-                const mentioned = matchesKeyword(text, st.name);
-                if (matchedCps.length > 0 && (mentioned || idx === 0)) {
+            const { targetStudent, line, posture, statusTag } = this._generateContextualStudentResponse(sc, text, matchedCps);
+
+            sc.students.forEach((st) => {
+                if (st.id === targetStudent.id) {
                     this.studentParticipation[st.id] = true;
-                    if (sc.id === 2 && st.id === 'huy') {
-                        out[st.id] = { posture: 'happy_task', statusTag: 'đang ghi chép', line: 'Dạ vâng! Em ghi lại ý kiến của cả nhóm ngay đây ạ!' };
-                    } else if (sc.id === 1 && st.id === 'bin') {
-                        out[st.id] = { posture: 'happy_task', statusTag: 'đang bấm giờ', line: 'Vâng! Em đứng bấm giờ 3 phút cho cả lớp nhé!' };
-                    } else {
-                        out[st.id] = { posture: 'speaking_pair', statusTag: 'đang tham gia', line: 'Dạ vâng, em hiểu rồi ạ!' };
-                    }
-                } else {
-                    const extraWarning = difficulty === 'hard' ? ' (Em vẫn còn hơi bối rối...)' : '';
                     out[st.id] = {
-                        posture: st.initialPosture,
-                        statusTag: '',
-                        line: st.initialLine + extraWarning
+                        posture: posture || 'speaking_pair',
+                        statusTag: statusTag || 'phát biểu',
+                        line: line
+                    };
+                } else {
+                    // Các em khác lắng nghe, chuyển tư thế hợp tác và TUYỆT ĐỐI không lặp lại kịch bản cũ
+                    const listenTag = st.id === 'huy' ? 'lắng nghe bạn' : 'đang theo dõi';
+                    out[st.id] = {
+                        posture: 'attentive',
+                        statusTag: listenTag,
+                        line: ''
                     };
                 }
             });
@@ -978,11 +1106,13 @@
                     }
                 }
 
-                // Chọn 1 học sinh tiêu biểu phát biểu để phản hồi trực tiếp, ngắn gọn (1.5-2s)
-                if (!focalStudent) {
-                    focalStudent = { st, react };
-                } else if (isPositive && st.id === 'lan') {
-                    focalStudent = { st, react };
+                // Chọn học sinh có thoại phản hồi để nói và phóng mặt cận cảnh
+                if (react.line && react.line.length > 0) {
+                    if (!focalStudent) {
+                        focalStudent = { st, react };
+                    } else if (st.id === 'lan' || st.id === 'nam') {
+                        focalStudent = { st, react };
+                    }
                 }
             });
 
@@ -999,7 +1129,15 @@
                 });
 
                 if (window.CharacterManager) {
-                    window.CharacterManager.showSpeechBubble(st.id, react.line, 5000, isPositive ? '#10b981' : '#f59e0b');
+                    window.CharacterManager.showSpeechBubble(st.id, react.line, 5500, isPositive ? '#10b981' : '#f59e0b');
+                    if (window.CharacterManager.setStudentSpeaking) {
+                        window.CharacterManager.setStudentSpeaking(st.id, true, 4500);
+                    }
+                }
+
+                // Hiệu ứng Camera 3D: Phóng mặt học sinh lên cận cảnh khi nói
+                if (window.ClassroomGame && window.ClassroomGame.focusOnStudent) {
+                    window.ClassroomGame.focusOnStudent(st.id, 4500);
                 }
 
                 if (window.SpeechEngine) {
@@ -1391,27 +1529,33 @@
             return true;
         },
 
+        toggleManualTextInput: function () {
+            this.showManualTextInput = !this.showManualTextInput;
+            this.renderInClassHud();
+        },
+
         handleSpaceUp: function () {
             if (!this._spaceHolding) return false;
             this._spaceHolding = false;
             if (!window.SpeechEngine) return false;
 
             window.SpeechEngine.flushAndStop((spokenText) => {
-                if (!spokenText) return;
+                const phrase = spokenText || this.draftUtterance;
+                if (!phrase) return;
                 if (this.flowStep === 1) {
-                    this.step1HeardText = spokenText;
+                    this.step1HeardText = phrase;
                     this.step1Verified = true;
                     this.renderFlowWizard();
                 } else if (this.flowStep === 6) {
-                    this.speakWarmupGreeting(spokenText);
+                    this.speakWarmupGreeting(phrase);
                 } else if (this.flowStep === 7) {
                     this.goToFlowStep(9);
-                    this.submitTeacherUtterance(spokenText);
+                    this.submitTeacherUtterance(phrase);
                 } else if (this.flowStep === 9) {
-                    this.submitTeacherUtterance(spokenText);
+                    this.submitTeacherUtterance(phrase);
                 } else if (this.flowStep === 13) {
-                    this.step13RetryText = spokenText;
-                    this._evaluateStep13Retry(spokenText);
+                    this.step13RetryText = phrase;
+                    this._evaluateStep13Retry(phrase);
                     this.renderFlowWizard();
                 }
             });
@@ -1425,17 +1569,18 @@
             const existing = (this._sttTarget === 'step8' && activeInput) ? activeInput.value : '';
             if (window.SpeechEngine.isListening) {
                 window.SpeechEngine.flushAndStop((spokenText) => {
-                    if (!spokenText) return;
+                    const phrase = spokenText || this.draftUtterance;
+                    if (!phrase) return;
                     if (this._sttTarget === 'step1') {
-                        this.step1HeardText = spokenText;
+                        this.step1HeardText = phrase;
                         this.step1Verified = true;
                         this.renderFlowWizard();
                     } else if (this._sttTarget === 'step13') {
-                        this.step13RetryText = spokenText;
-                        this._evaluateStep13Retry(spokenText);
+                        this.step13RetryText = phrase;
+                        this._evaluateStep13Retry(phrase);
                         this.renderFlowWizard();
                     } else if (this.flowStep === 6 || this.flowStep === 9) {
-                        this.submitTeacherUtterance(spokenText);
+                        this.submitTeacherUtterance(phrase);
                     }
                 });
             } else {
@@ -2409,30 +2554,61 @@
                         ${drawerHtml}
                     </div>
                     <div class="c3d-bottom-dock">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button id="c3d-mic-btn" class="c3d-mic-btn ${listening ? 'listening' : ''}" onclick="window.ScenarioSystem.toggleMic('main')" title="Bật/Tắt Micro (Hoặc giữ Space)">🎙️</button>
-                            <div style="display:flex; flex-direction:column;">
-                                <span id="c3d-mic-label" style="font-size:12.5px; font-weight:700; color:#e2e8f0;">${listening ? 'Đang nghe bạn nói...' : 'Giữ Space để nói'}</span>
-                                <span style="font-size:11px; color:#94a3b8;">Tiếng Việt (vi-VN)</span>
+                        <!-- THẺ GIÁO VIÊN ĐANG MẤP MÁY NÓI & NÚT MICRO -->
+                        <div class="c3d-teacher-dock-box">
+                            <div class="c3d-teacher-avatar-wrapper ${listening ? 'speaking' : ''}">
+                                <img src="${escapeHtml((this.selectedTeacher && this.selectedTeacher.avatarUrl) || 'assets/ui/icon_teacher.png')}"
+                                     class="c3d-teacher-avatar-pic"
+                                     onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                <div class="c3d-teacher-avatar-fallback">👩‍🏫</div>
+                                <div class="c3d-voice-wave ${listening ? 'active' : ''}">
+                                    <span></span><span></span><span></span><span></span>
+                                </div>
                             </div>
-                            <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại mở đầu & đối thoại học sinh">↺ Nghe lại</button>
+                            <div class="c3d-teacher-meta">
+                                <span class="c3d-teacher-name">${escapeHtml((this.selectedTeacher && this.selectedTeacher.displayName) || 'Giáo viên')}</span>
+                                <span class="c3d-teacher-status ${listening ? 'speaking' : ''}">${listening ? '🔴 Đang mấp máy nói...' : 'Giáo viên'}</span>
+                            </div>
+                            <button id="c3d-mic-btn" class="c3d-mic-btn-prominent ${listening ? 'listening' : ''}"
+                                    onclick="window.ScenarioSystem.toggleMic('main')"
+                                    title="Nhấn để Bật/Tắt thu âm hoặc giữ phím Space để nói">
+                                <span class="c3d-mic-icon">${listening ? '⏹' : '🎙️'}</span>
+                                <span class="c3d-mic-text">${listening ? 'Dừng & Gửi' : 'Nói (Space)'}</span>
+                            </button>
                         </div>
 
-                        <div class="c3d-speech-bar" style="display:flex; flex-direction:column; gap:4px; flex:1; max-width:680px;">
+                        <!-- KHUNG LỜI NÓI TRỰC TIẾP & GỬI NGAY ĐỂ HỌC SINH PHẢN HỒI -->
+                        <div class="c3d-speech-bar-panel">
                             <div class="c3d-quick-chips">
                                 <span style="font-size:11px; color:#94a3b8; font-weight:700;">💬 Nói nhanh câu mẫu:</span>
                                 <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Chào cả lớp, cô mời nhóm bạn Huy trình bày ý kiến trước nhé!')">1. Gọi nhóm Huy</button>
                                 <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Nam và Lan cứ bình tĩnh chuẩn bị, cô cho các em thêm 1 phút nhé!')">2. Động viên Lan & Nam</button>
                                 <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Cả lớp cùng lắng nghe và hỗ trợ ý kiến của bạn nào!')">3. Điều phối cả lớp</button>
                             </div>
-                            <div style="display:flex; align-items:center; gap:8px; width:100%;">
-                                <input id="c3d-speech-input" type="text" class="c3d-speech-input" style="flex:1;"
-                                    value="${escapeHtml(this.draftUtterance)}"
-                                    placeholder="${lastLog ? `${escapeHtml(lastLog.speaker)}: ${escapeHtml(lastLog.text.slice(0, 68))}` : 'Nói bằng Space hoặc nhập câu xử lý sư phạm (Enter để gửi)...'}"
-                                    onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ScenarioSystem.submitTeacherUtterance(); }">
-                                <button class="c3d-pill-dark" style="background:#2563eb;border-color:#38bdf8;cursor:pointer;white-space:nowrap;"
-                                    onclick="window.ScenarioSystem.submitTeacherUtterance()">Gửi</button>
+
+                            <div class="c3d-voice-bubble-row">
+                                <div class="c3d-voice-bubble-display ${listening ? 'active' : ''}">
+                                    <span class="c3d-quote-mark">“</span>
+                                    <span id="c3d-voice-live-text" class="c3d-voice-live-text">${escapeHtml(this.draftUtterance || (listening ? 'Đang lắng nghe lời nói của thầy/cô qua Micro...' : 'Giữ Space hoặc bấm "Nói" để nói xử lý sư phạm...'))}</span>
+                                    <span class="c3d-quote-mark">”</span>
+                                </div>
+                                <button class="c3d-send-instant-btn" onclick="window.ScenarioSystem.submitTeacherUtterance()" title="Gửi lời nói để học sinh 3D phản hồi ngay">
+                                    🚀 Gửi & Phản hồi
+                                </button>
+                                <button class="c3d-keyboard-toggle-btn" onclick="window.ScenarioSystem.toggleManualTextInput()" title="Bật/Tắt nhập bàn phím dự phòng">
+                                    ⌨️
+                                </button>
                             </div>
+
+                            ${this.showManualTextInput ? `
+                                <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                                    <input id="c3d-speech-input" type="text" class="c3d-speech-input" style="flex:1; height:32px; font-size:12.5px;"
+                                        value="${escapeHtml(this.draftUtterance)}"
+                                        placeholder="Nhập câu xử lý sư phạm bằng bàn phím (Enter để gửi)..."
+                                        onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ScenarioSystem.submitTeacherUtterance(); }">
+                                    <button class="mp-btn-primary" style="padding:4px 12px; font-size:12px; height:32px;" onclick="window.ScenarioSystem.submitTeacherUtterance()">Gửi</button>
+                                </div>
+                            ` : ''}
                         </div>
 
                         ${rightDockBtn}

@@ -363,6 +363,18 @@
             return char ? char.mesh.position.clone() : null;
         },
 
+        setStudentSpeaking: function (studentId, isSpeaking, durationMs = 4500) {
+            const char = this.studentMap[studentId];
+            if (!char) return;
+            char.isSpeaking = Boolean(isSpeaking);
+            char.speakingUntil = isSpeaking ? (performance.now() + durationMs) : 0;
+            if (isSpeaking) {
+                // Nhấc tư thế lên nhẹ nhàng và xoay mặt hướng về giáo viên
+                char.head.rotation.y = 0;
+                char.head.rotation.x = -0.05;
+            }
+        },
+
         getActiveStudents: function () {
             return this.characters.filter(ch => ch.type === 'student');
         },
@@ -526,9 +538,37 @@
             };
         },
 
-        // ================= TẠO HỌC SINH 3D =================
+        // ================= TẠO HỌC SINH 3D ĐỘC BẢN CHO TỪNG NHÂN VẬT =================
         createStudent: function (config) {
             const group = new THREE.Group();
+
+            // Hồ sơ hình thái 3D riêng biệt cho từng học sinh để không ai giống ai
+            const STUDENT_LOOKS = {
+                bin: { skin: 0xffe0bd, hairColor: 0x5c2c16, hairStyle: 'tousled', vestColor: null, collarColor: 0xf59e0b, glasses: false, scarf: true },
+                na: { skin: 0xffe4cb, hairColor: 0x291d17, hairStyle: 'pigtails', vestColor: null, collarColor: 0x38bdf8, glasses: false, scarf: true },
+                ti: { skin: 0xf5d0a9, hairColor: 0x18181b, hairStyle: 'parted', vestColor: 0x059669, collarColor: 0x10b981, glasses: true, scarf: true },
+                huy: { skin: 0xf5d0a9, hairColor: 0x241711, hairStyle: 'spiky', vestColor: null, collarColor: 0x2563eb, glasses: false, scarf: true },
+                lan: { skin: 0xffe4cb, hairColor: 0x3e2723, hairStyle: 'bob', vestColor: 0xd97706, collarColor: 0xf472b6, glasses: true, scarf: false },
+                nam: { skin: 0xffe0bd, hairColor: 0x18181b, hairStyle: 'parted', vestColor: 0x1e3a8a, collarColor: 0x3b82f6, glasses: true, scarf: false },
+                khoa: { skin: 0xedc9af, hairColor: 0x171717, hairStyle: 'undercut', vestColor: 0x334155, collarColor: 0xef4444, glasses: false, scarf: false, headphones: true },
+                mai: { skin: 0xffe4cb, hairColor: 0x3b2318, hairStyle: 'headband', vestColor: 0x7c3aed, collarColor: 0xa855f7, glasses: false, scarf: false },
+                tuan: { skin: 0xf5d0a9, hairColor: 0x262626, hairStyle: 'messy', vestColor: 0x2563eb, collarColor: 0x60a5fa, glasses: true, scarf: false },
+                linh: { skin: 0xffe0bd, hairColor: 0x1c1917, hairStyle: 'ponytail', vestColor: null, collarColor: 0xec4899, glasses: false, scarf: false },
+                thao: { skin: 0xffe4cb, hairColor: 0x451a03, hairStyle: 'braids', vestColor: null, collarColor: 0xf472b6, glasses: false, scarf: true },
+                quan: { skin: 0xedc9af, hairColor: 0x18181b, hairStyle: 'spiky', vestColor: null, collarColor: 0x0284c7, glasses: false, scarf: true },
+                ha: { skin: 0xffe0bd, hairColor: 0x291d17, hairStyle: 'pigtails', vestColor: null, collarColor: 0x10b981, glasses: false, scarf: true }
+            };
+
+            const normId = String(config.id || '').toLowerCase();
+            const look = STUDENT_LOOKS[normId] || {
+                skin: config.gender === 'female' ? 0xffe4cb : 0xffe0bd,
+                hairColor: config.gender === 'female' ? 0x291d17 : 0x1e293b,
+                hairStyle: config.gender === 'female' ? 'ponytail' : 'parted',
+                vestColor: null,
+                collarColor: 0x38bdf8,
+                glasses: false,
+                scarf: !config.hideScarf
+            };
 
             // Khớp chính xác tọa độ bàn học sinh trong game.js
             const xSpacing = 2.6;
@@ -549,11 +589,11 @@
             group.position.copy(basePos);
             group.rotation.y = 0; // Quay mặt về phía bảng (-Z)
 
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffe0bd, roughness: 0.6 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: look.skin, roughness: 0.6 });
             const uniformWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
             const darkNavyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
             const redTieMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 });
-            const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: look.hairColor, roughness: 0.75 });
             const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.3 });
 
             // Nhóm thân trên để có thể cúi người mượt mà
@@ -566,13 +606,22 @@
             torso.castShadow = true;
             torsoGroup.add(torso);
 
-            if (!config.hideScarf) {
+            // Áo gile len / áo khoác màu sắc riêng cho từng học sinh
+            if (look.vestColor) {
+                const vestMat = new THREE.MeshStandardMaterial({ color: look.vestColor, roughness: 0.8 });
+                const vest = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.43, 0.23), vestMat);
+                vest.position.set(0, 0.22, 0);
+                vest.castShadow = true;
+                torsoGroup.add(vest);
+            }
+
+            if (look.scarf && !config.hideScarf) {
                 const redScarf = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.24, 0.03), redTieMat);
                 redScarf.position.set(0, 0.36, -0.12);
                 torsoGroup.add(redScarf);
             }
 
-            // Đầu & Mắt & Tóc
+            // Đầu & Mắt & Miệng & Tóc
             const headGroup = new THREE.Group();
             headGroup.position.set(0, 0.63, 0);
             torsoGroup.add(headGroup);
@@ -589,12 +638,77 @@
             eyeR.position.set(0.055, 0.01, -0.115);
             headGroup.add(eyeR);
 
-            const isFemale = config.gender === 'female';
-            if (isFemale) {
+            // Miệng 3D mấp máy sinh động khi phát biểu
+            const mouthMat = new THREE.MeshBasicMaterial({ color: 0x991b1b });
+            const mouthMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), mouthMat);
+            mouthMesh.position.set(0, -0.065, -0.115);
+            headGroup.add(mouthMesh);
+
+            // Kính mắt 3D nếu nhân vật đeo kính (Lan, Nam, Tí, Tuấn)
+            if (look.glasses) {
+                const glassMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 });
+                const frameL = new THREE.Mesh(new THREE.RingGeometry(0.024, 0.034, 16), glassMat);
+                frameL.position.set(-0.055, 0.01, -0.118);
+                headGroup.add(frameL);
+                const frameR = new THREE.Mesh(new THREE.RingGeometry(0.024, 0.034, 16), glassMat);
+                frameR.position.set(0.055, 0.01, -0.118);
+                headGroup.add(frameR);
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.008, 0.01), glassMat);
+                bridge.position.set(0, 0.01, -0.118);
+                headGroup.add(bridge);
+            }
+
+            // Tai nghe sành điệu cho Khoa
+            if (look.headphones) {
+                const hpMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+                const hpBand = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 24, Math.PI), hpMat);
+                hpBand.rotation.x = Math.PI / 2;
+                hpBand.position.set(0, -0.02, 0);
+                torsoGroup.add(hpBand);
+            }
+
+            // Tạo kiểu tóc phong phú đa dạng theo cá tính học sinh
+            if (look.hairStyle === 'pigtails') {
                 const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.24), hairMat);
                 hairTop.position.set(0, 0.13, 0.01);
                 headGroup.add(hairTop);
-
+                const bunL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), hairMat);
+                bunL.position.set(-0.14, 0.06, 0.05);
+                headGroup.add(bunL);
+                const bunR = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), hairMat);
+                bunR.position.set(0.14, 0.06, 0.05);
+                headGroup.add(bunR);
+            } else if (look.hairStyle === 'bob') {
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.25), hairMat);
+                hairTop.position.set(0, 0.12, 0.01);
+                headGroup.add(hairTop);
+                const hairSideL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, 0.22), hairMat);
+                hairSideL.position.set(-0.12, -0.01, 0.02);
+                headGroup.add(hairSideL);
+                const hairSideR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, 0.22), hairMat);
+                hairSideR.position.set(0.12, -0.01, 0.02);
+                headGroup.add(hairSideR);
+            } else if (look.hairStyle === 'spiky') {
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.11, 0.24), hairMat);
+                hairTop.position.set(0, 0.13, -0.01);
+                headGroup.add(hairTop);
+                const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.09, 4), hairMat);
+                spike.position.set(0, 0.20, -0.03);
+                headGroup.add(spike);
+            } else if (look.hairStyle === 'braids') {
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.24), hairMat);
+                hairTop.position.set(0, 0.13, 0.01);
+                headGroup.add(hairTop);
+                const braidL = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 0.26, 6), hairMat);
+                braidL.position.set(-0.12, -0.05, -0.04);
+                headGroup.add(braidL);
+                const braidR = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.02, 0.26, 6), hairMat);
+                braidR.position.set(0.12, -0.05, -0.04);
+                headGroup.add(braidR);
+            } else if (look.hairStyle === 'ponytail') {
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.24), hairMat);
+                hairTop.position.set(0, 0.13, 0.01);
+                headGroup.add(hairTop);
                 const ponytail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.26, 0.1), hairMat);
                 ponytail.position.set(0, 0.03, 0.16);
                 ponytail.rotation.x = 0.3;
@@ -707,6 +821,9 @@
                 badgeText: config.badgeText || 'Học sinh AI',
                 speechBubble: speechBubble,
                 speechBubbleExpiresAt: 0,
+                mouthMesh: mouthMesh,
+                isSpeaking: false,
+                speakingUntil: 0,
                 type: 'student',
                 id: config.id,
                 name: config.name,
@@ -856,6 +973,20 @@
                 // Hết giờ hiển thị bong bóng 3D
                 if (char.speechBubble && char.speechBubble.visible && char.speechBubbleExpiresAt > 0 && now > char.speechBubbleExpiresAt) {
                     char.speechBubble.visible = false;
+                }
+
+                // Học sinh đang phát biểu trực tiếp: đứng nhấc người lên, mấp máy miệng, gật đầu sinh động
+                if (char.isSpeaking && (char.speakingUntil === 0 || now < char.speakingUntil)) {
+                    char.mesh.position.y = char.basePos.y + 0.14 + Math.sin(ct * 3.5) * 0.02;
+                    char.head.rotation.x = Math.sin(ct * 6.0) * 0.1;
+                    char.head.rotation.y = Math.sin(ct * 2.8) * 0.14;
+                    if (char.mouthMesh) {
+                        char.mouthMesh.scale.y = 1.0 + Math.abs(Math.sin(ct * 12.0)) * 3.6;
+                    }
+                    char.armR.rotation.x = -Math.PI / 3.2 + Math.sin(ct * 4.5) * 0.2;
+                    return;
+                } else if (char.mouthMesh && char.mouthMesh.scale.y > 1.0) {
+                    char.mouthMesh.scale.y = 1.0;
                 }
 
                 switch (char.posture) {

@@ -1187,6 +1187,50 @@
         }
     }
 
+    // Quản lý Camera 3D phóng cận cảnh học sinh đang phát biểu
+    const cameraFocusState = {
+        active: false,
+        studentId: null,
+        targetPos: new THREE.Vector3(),
+        targetLookAt: new THREE.Vector3(),
+        startPos: new THREE.Vector3(),
+        progress: 0,
+        stage: 'none', // 'zooming_in' | 'holding' | 'zooming_out'
+        holdDuration: 4500,
+        holdTimer: 0
+    };
+
+    function focusOnStudent(studentId, durationMs = 4500) {
+        if (!window.CharacterManager) return;
+        const stPos = window.CharacterManager.getStudentWorldPosition(studentId);
+        if (!stPos) return;
+
+        cameraFocusState.active = true;
+        cameraFocusState.studentId = studentId;
+        // Đặt Camera lướt đến đối diện cận cảnh khuôn mặt học sinh
+        const offsetX = stPos.x * 0.55;
+        cameraFocusState.targetPos.set(offsetX, 1.34, stPos.z - 1.18);
+        cameraFocusState.targetLookAt.set(stPos.x, 1.12, stPos.z);
+        cameraFocusState.startPos.copy(camera.position);
+        cameraFocusState.progress = 0;
+        cameraFocusState.stage = 'zooming_in';
+        cameraFocusState.holdDuration = durationMs || 4500;
+        cameraFocusState.holdTimer = 0;
+
+        // Bật hoạt họa học sinh đứng lên, mấp máy môi & gật đầu
+        if (window.CharacterManager.setStudentSpeaking) {
+            window.CharacterManager.setStudentSpeaking(studentId, true, durationMs);
+        }
+    }
+
+    function returnToTeacherPodium() {
+        if (cameraFocusState.active) {
+            cameraFocusState.stage = 'zooming_out';
+            cameraFocusState.progress = 0;
+            cameraFocusState.startPos.copy(camera.position);
+        }
+    }
+
     // Cập nhật di chuyển & va chạm người chơi
     function updatePlayerMovement(delta) {
         // Tốc độ di chuyển
@@ -1242,7 +1286,37 @@
         player.position.z = Math.max(-boundZ, Math.min(boundZ, player.position.z));
 
         // Cập nhật vị trí Camera
-        if (Config.cameraMode === 'fps') {
+        if (cameraFocusState.active) {
+            // Hiệu ứng Camera 3D phóng cận cảnh khuôn mặt học sinh đang nói
+            if (cameraFocusState.stage === 'zooming_in') {
+                cameraFocusState.progress = Math.min(1.0, cameraFocusState.progress + delta * 2.8);
+                const t = 0.5 - 0.5 * Math.cos(cameraFocusState.progress * Math.PI); // Smooth easeInOut
+                camera.position.lerpVectors(cameraFocusState.startPos, cameraFocusState.targetPos, t);
+                camera.lookAt(cameraFocusState.targetLookAt);
+                if (cameraFocusState.progress >= 1.0) {
+                    cameraFocusState.stage = 'holding';
+                    cameraFocusState.holdTimer = 0;
+                }
+            } else if (cameraFocusState.stage === 'holding') {
+                camera.position.copy(cameraFocusState.targetPos);
+                camera.lookAt(cameraFocusState.targetLookAt);
+                cameraFocusState.holdTimer += delta * 1000;
+                if (cameraFocusState.holdTimer >= cameraFocusState.holdDuration) {
+                    cameraFocusState.stage = 'zooming_out';
+                    cameraFocusState.progress = 0;
+                    cameraFocusState.startPos.copy(camera.position);
+                }
+            } else if (cameraFocusState.stage === 'zooming_out') {
+                cameraFocusState.progress = Math.min(1.0, cameraFocusState.progress + delta * 2.2);
+                const t = 0.5 - 0.5 * Math.cos(cameraFocusState.progress * Math.PI);
+                const podiumPos = new THREE.Vector3(player.position.x, player.position.y, player.position.z);
+                camera.position.lerpVectors(cameraFocusState.startPos, podiumPos, t);
+                camera.rotation.copy(player.rotation);
+                if (cameraFocusState.progress >= 1.0) {
+                    cameraFocusState.active = false;
+                }
+            }
+        } else if (Config.cameraMode === 'fps') {
             camera.position.x = player.position.x;
             // Hiệu ứng nhún đầu khi đi lại
             const bobOffset = Config.headBobbing && isMoving ? Math.sin(player.bobTimer) * 0.045 : 0;
@@ -1732,6 +1806,14 @@
         setFlowPhase: function (phaseMode) {
             // 'wizard' (1-5, 11-14) | 'classroom3d' (6-10) | 'free'
             document.body.dataset.flowPhase = phaseMode || 'wizard';
+        },
+
+        focusOnStudent: function (studentId, durationMs) {
+            focusOnStudent(studentId, durationMs);
+        },
+
+        returnToPodium: function () {
+            returnToTeacherPodium();
         },
 
         getDistanceToPoint: function (targetVec) {
