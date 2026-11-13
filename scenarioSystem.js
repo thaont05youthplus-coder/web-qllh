@@ -1,4 +1,4 @@
-// scenarioSystem.js - Hệ thống Mô phỏng Sư phạm 14 Bước (chuẩn Mockup + Luật Nhà giáo 73/2025/QH15)
+// scenarioSystem.js - ULIS TeachLab: Hệ thống Mô phỏng Sư phạm 14 Bước (chuẩn Mockup + Luật Nhà giáo 73/2025/QH15)
 (function () {
     'use strict';
 
@@ -284,7 +284,7 @@
                 }
                 if (this._sttTarget === 'step13') {
                     this.step13RetryText = combined;
-                    this._evaluateStep13Retry(combined);
+                    // Không tự động đánh giá và nói chồng câu học sinh trên interim STT; chỉ đánh giá khi nhả mic / kết thúc nói
                     this.renderFlowWizard();
                     return;
                 }
@@ -354,7 +354,13 @@
 
             if (target === 6 && this.activeScenario) {
                 this._syncClassroom3D(this.activeScenario, true);
-                this.hintBannerText = 'Khởi động: hãy dạy như bình thường';
+                this.hintBannerText = 'Khởi động: Giáo viên giao nhiệm vụ mở đầu tiết học...';
+                // Tự động phát câu mở đầu của giáo viên, không bắt sinh viên phải nói ngay lượt 1
+                setTimeout(() => {
+                    if (this.flowStep === 6) {
+                        this.speakWarmupGreeting();
+                    }
+                }, 350);
             }
 
             if (target === 7 && this.activeScenario) {
@@ -512,8 +518,8 @@
                 if (!this.teacherNameEdited) {
                     this.teacherDisplayName = found.displayName || found.name;
                 }
-                if (found.defaultVoiceId && this.selectedVoiceId !== 'real_voice') {
-                    this.selectedVoiceId = found.defaultVoiceId;
+                if (this.selectedVoiceId !== 'real_voice') {
+                    this.selectedVoiceId = this.selectedTeacherGender === 'male' ? 'male_young' : 'female_young';
                 }
             }
             if (window.CharacterManager && window.CharacterManager.setTeacherPersona) {
@@ -723,22 +729,21 @@
                 window.CharacterManager.triggerScenarioIncident(sc.students);
             }
 
-            // Tránh nhân đôi bản ghi nếu đã chèn tình huống mở đầu
+            // Ghi nhận đầy đủ phát biểu của các học sinh vào nhật ký hội thoại
             const hasIncident = this.transcriptLog.some(l => l.tag === 'incident_start');
             if (!hasIncident) {
-                const leadSt = sc.students[0];
-                if (leadSt) {
+                sc.students.forEach((st, idx) => {
                     this.transcriptLog.push({
                         role: 'student',
-                        studentId: leadSt.id,
-                        speaker: leadSt.name,
-                        text: leadSt.initialLine,
-                        pitch: leadSt.voicePitch,
-                        rate: leadSt.voiceRate,
-                        timestampSec: this.sessionElapsedSec,
+                        studentId: st.id,
+                        speaker: st.name,
+                        text: st.initialLine,
+                        pitch: st.voicePitch,
+                        rate: st.voiceRate,
+                        timestampSec: this.sessionElapsedSec + idx * 2,
                         tag: 'incident_start'
                     });
-                }
+                });
             }
 
             if (window.SpeechEngine && window.CharacterManager) {
@@ -756,13 +761,55 @@
                     onEnd: () => {
                         if (idx === sc.students.length - 1 && this.flowStep === 7) {
                             this.hintBannerText = this.selectedMode === 'guided'
-                                ? 'Đã quan sát rõ lớp? Bấm "Nhận diện tình huống" để mô tả!'
-                                : 'Bạn có thể nói/xử lý ngay trong lớp!';
+                                ? 'Tình huống đã phát sinh! Bấm "Nhận diện tình huống" hoặc nói để xử lý'
+                                : 'Tình huống đã phát sinh! Bạn hãy nói hoặc xử lý ngay!';
+                            this.renderInClassHud();
                         }
                     }
                 }));
                 window.SpeechEngine.speakSequence(queue);
             }
+        },
+
+        replayCurrentIncident: function () {
+            const sc = this.activeScenario;
+            if (!sc || !window.SpeechEngine) return;
+            window.SpeechEngine.stopSpeaking();
+            if (window.SpeechEngine.isListening) {
+                window.SpeechEngine.stopListening();
+            }
+
+            const t = this.selectedTeacher;
+            const teacherLine = (sc.blindContext && sc.blindContext.warmupPrompt) ||
+                this.warmupGreetingText ||
+                'Chào cả lớp! Chúng ta bắt đầu bài học nhé!';
+
+            const queue = [
+                {
+                    text: teacherLine,
+                    speaker: this.teacherDisplayName || t.displayName || t.name,
+                    gender: (t.gender || t.hairStyle) === 'male' ? 'male' : 'female',
+                    isStudent: false,
+                    forceLang: 'vi-VN',
+                    pitch: t.voicePitch || 1.0,
+                    rate: t.voiceRate || 1.0
+                },
+                ...sc.students.map(st => ({
+                    text: st.initialLine,
+                    speaker: st.name,
+                    gender: st.gender || 'female',
+                    isStudent: true,
+                    forceLang: 'vi-VN',
+                    pitch: st.voicePitch || 1.0,
+                    rate: st.voiceRate || 1.0,
+                    onStart: () => {
+                        if (window.CharacterManager) {
+                            window.CharacterManager.showSpeechBubble(st.id, st.initialLine, 5000, st.color);
+                        }
+                    }
+                }))
+            ];
+            window.SpeechEngine.speakSequence(queue);
         },
 
         advanceAfterStep7: function () {
@@ -1153,37 +1200,37 @@
             const negIds = new Set(this.hitNegativeBranches.map(b => b.id));
 
             if (scenarioId === 1) {
-                if (cid === 1) return { passed: cpSet.has('model_demo') || cpSet.has('check_icq') || this.step3Resolved, quote: pickQuote(['làm mẫu', 'watch me', 'speaking', 'what do you like']), gapDetail: 'Hoạt động nói theo cặp chưa được hướng dẫn rõ quy trình để đạt mục tiêu tiết học.' };
-                if (cid === 6) return { passed: cpSet.has('stop_signal') && (cpSet.has('model_demo') || cpSet.has('check_icq')), quote: pickQuote(['eyes on me', 'one', 'làm mẫu', 'writing or speaking', 'nói hay viết']), gapDetail: 'Cần dùng tín hiệu dừng kết hợp làm mẫu trực quan và câu hỏi kiểm tra hiểu (ICQs).' };
-                if (cid === 2) return { passed: !negIds.has('scold_bin') && (cpSet.has('assign_bin') || this.step3Resolved), quote: pickQuote(['bin', 'timekeeper', 'bấm giờ', 'mắng', 'im đi']), gapDetail: 'Lời nói với Bin cần tôn trọng và trao cơ hội công bằng thay vì quát mắng.' };
-                if (cid === 5) return { passed: !negIds.has('scold_bin') && (cpSet.has('check_icq') || cpSet.has('model_demo') || this.step3Resolved), quote: pickQuote(['tí', 'hỏi bạn', 'không viết', 'speaking', 'ngồi xuống ngay']), gapDetail: 'Cần giữ không khí an toàn để học sinh như Tí dám hỏi lại.' };
+                if (cid === 1) return { passed: cpSet.has('model_demo') || cpSet.has('check_icq') || this.step3Resolved, quote: pickQuote(['làm mẫu', 'sở thích', 'chỉ nói', 'hỏi đáp']), gapDetail: 'Hoạt động hỏi – đáp theo cặp chưa được hướng dẫn rõ quy trình để đạt mục tiêu tiết học.' };
+                if (cid === 6) return { passed: cpSet.has('stop_signal') && (cpSet.has('model_demo') || cpSet.has('check_icq')), quote: pickQuote(['một hai ba', '1 2 3', 'làm mẫu', 'nói hay viết', 'chỉ nói']), gapDetail: 'Cần dùng tín hiệu dừng kết hợp làm mẫu trực quan và câu hỏi kiểm tra hiểu (ICQs).' };
+                if (cid === 2) return { passed: !negIds.has('scold_bin') && (cpSet.has('assign_bin') || this.step3Resolved), quote: pickQuote(['bin', 'bấm giờ', 'nhóm trưởng', 'mắng', 'im đi']), gapDetail: 'Lời nói với Bin cần tôn trọng và trao cơ hội công bằng thay vì quát mắng.' };
+                if (cid === 5) return { passed: !negIds.has('scold_bin') && (cpSet.has('check_icq') || cpSet.has('model_demo') || this.step3Resolved), quote: pickQuote(['tí', 'hỏi bạn', 'không viết', 'sở thích', 'ngồi xuống ngay']), gapDetail: 'Cần giữ không khí an toàn để học sinh như Tí dám hỏi lại.' };
             }
             if (scenarioId === 2) {
-                if (cid === 2) return { passed: !negIds.has('silence_huy') && cpSet.has('ack_huy') && (cpSet.has('scaffold_nam') || cpSet.has('support_lan')), quote: pickQuote(['huy', 'lan', 'nam', 'stop', 'im đi', 'nhường']), gapDetail: 'Cần ghi nhận Huy trước khi xin lượt công bằng cho Lan và Nam.' };
-                if (cid === 3) return { passed: cpSet.has('scaffold_nam') || cpSet.has('ack_huy'), quote: pickQuote(['nam', 'play sports', 'reporter', 'thư ký', 'huy']), gapDetail: 'Cần tạo giàn giáo vừa sức cho Nam và chuyển năng lượng của Huy sang vai trò hữu ích.' };
-                if (cid === 5) return { passed: !negIds.has('silence_huy') && !negIds.has('call_lan_suddenly') && (cpSet.has('think_time') || cpSet.has('support_lan')), quote: pickQuote(['30', 'think', 'suy nghĩ', 'lan', 'talk to']), gapDetail: 'Gọi bất ngờ khi học sinh chưa kịp chuẩn bị làm giảm cảm giác an toàn tâm lý.' };
-                if (cid === 6) return { passed: cpSet.has('think_time') && (cpSet.has('scaffold_nam') || cpSet.has('support_lan')), quote: pickQuote(['30', 'think', 'yes or no', 'talk to']), gapDetail: 'Cần áp dụng thời gian chờ suy nghĩ (Think time) trước khi gọi.' };
+                if (cid === 2) return { passed: !negIds.has('silence_huy') && cpSet.has('ack_huy') && (cpSet.has('scaffold_nam') || cpSet.has('support_lan')), quote: pickQuote(['huy', 'lan', 'nam', 'nhường', 'thư ký', 'im đi']), gapDetail: 'Cần ghi nhận Huy trước khi xin lượt công bằng cho Lan và Nam.' };
+                if (cid === 3) return { passed: cpSet.has('scaffold_nam') || cpSet.has('ack_huy'), quote: pickQuote(['nam', 'thể thao', 'đá bóng', 'thư ký', 'huy']), gapDetail: 'Cần tạo giàn giáo vừa sức cho Nam và chuyển năng lượng của Huy sang vai trò hữu ích.' };
+                if (cid === 5) return { passed: !negIds.has('silence_huy') && !negIds.has('call_lan_suddenly') && (cpSet.has('think_time') || cpSet.has('support_lan')), quote: pickQuote(['30 giây', 'suy nghĩ', 'lan', 'trao đổi với bạn']), gapDetail: 'Gọi bất ngờ khi học sinh chưa kịp chuẩn bị làm giảm cảm giác an toàn tâm lý.' };
+                if (cid === 6) return { passed: cpSet.has('think_time') && (cpSet.has('scaffold_nam') || cpSet.has('support_lan')), quote: pickQuote(['30 giây', 'suy nghĩ', 'từng bước', 'trao đổi']), gapDetail: 'Cần áp dụng thời gian chờ suy nghĩ (Think time) trước khi gọi.' };
             }
             if (scenarioId === 3) {
-                if (cid === 7) return { passed: !negIds.has('public_yell') && cpSet.has('refer_rule'), quote: pickQuote(['nội quy', 'rule', 'quy định', 'tịch thu']), gapDetail: 'Cần căn cứ đúng nội quy lớp đã thống nhất, tránh tự đặt hình thức xử lý trước lớp.' };
-                if (cid === 4) return { passed: !negIds.has('public_yell') && cpSet.has('private_calm'), quote: pickQuote(['phone away', 'cất máy', 'after class', 'sau giờ', 'dừng băng']), gapDetail: 'Cần giữ thái độ điềm tĩnh, ngôn ngữ mẫu mực để không căng thẳng hóa sự việc.' };
+                if (cid === 7) return { passed: !negIds.has('public_yell') && cpSet.has('refer_rule'), quote: pickQuote(['nội quy', 'quy định', 'thống nhất', 'tịch thu']), gapDetail: 'Cần căn cứ đúng nội quy lớp đã thống nhất, tránh tự đặt hình thức xử lý trước lớp.' };
+                if (cid === 4) return { passed: !negIds.has('public_yell') && cpSet.has('private_calm'), quote: pickQuote(['cất điện thoại', 'cất máy', 'sau giờ', 'cuối tiết', 'dừng bài']), gapDetail: 'Cần giữ thái độ điềm tĩnh, ngôn ngữ mẫu mực để không căng thẳng hóa sự việc.' };
                 if (cid === 2) {
                     const nearKhoa = this.proximityToKhoa !== null && this.proximityToKhoa <= 3.6;
-                    return { passed: !negIds.has('public_yell') && (cpSet.has('private_calm') || nearKhoa), quote: pickQuote(['khoa', 'phone away', 'nhắc riêng', 'tịch thu']), gapDetail: 'Cần đi lại gần nhắc nhỏ kín đáo để giữ thể diện cho học sinh.' };
+                    return { passed: !negIds.has('public_yell') && (cpSet.has('private_calm') || nearKhoa), quote: pickQuote(['khoa', 'cất điện thoại', 'nhắc riêng', 'tịch thu']), gapDetail: 'Cần đi lại gần nhắc nhỏ kín đáo để giữ thể diện cho học sinh.' };
                 }
-                if (cid === 1) return { passed: !negIds.has('ignore_phone') && !negIds.has('public_yell') && cpSet.has('redirect_duc'), quote: pickQuote(['đức', 'question', 'câu', 'bài nghe']), gapDetail: 'Cần kéo Đức và lớp quay lại ngay nhiệm vụ bài nghe.' };
+                if (cid === 1) return { passed: !negIds.has('ignore_phone') && !negIds.has('public_yell') && cpSet.has('redirect_duc'), quote: pickQuote(['đức', 'luận điểm', 'câu', 'bài nghe', 'ý chính']), gapDetail: 'Cần kéo Đức và lớp quay lại ngay nhiệm vụ bài nghe.' };
             }
             if (scenarioId === 4) {
-                if (cid === 3) return { passed: !negIds.has('mai_help_tuan') && cpSet.has('extend_mai') && cpSet.has('scaffold_tuan'), quote: pickQuote(['mai', 'tuấn', 'example', 'want to be', 'giúp tuấn']), gapDetail: 'Cần giao việc mở rộng cho Mai và khung gợi ý cho Tuấn thay vì chép hộ.' };
+                if (cid === 3) return { passed: !negIds.has('mai_help_tuan') && cpSet.has('extend_mai') && cpSet.has('scaffold_tuan'), quote: pickQuote(['mai', 'tuấn', 'mở rộng', 'ví dụ', 'muốn trở thành', 'giúp tuấn']), gapDetail: 'Cần giao việc mở rộng cho Mai và khung gợi ý cho Tuấn thay vì chép hộ.' };
                 if (cid === 2) return { passed: !negIds.has('generic_encourage') && (cpSet.has('scaffold_tuan') || cpSet.has('check_linh')), quote: pickQuote(['tuấn', 'linh', 'cố lên']), gapDetail: 'Cần hỗ trợ công bằng cho cả học sinh bế tắc lẫn em làm nhầm đề.' };
-                if (cid === 1) return { passed: cpSet.has('check_linh'), quote: pickQuote(['linh', 'đọc lại', 'whose job', 'câu hỏi']), gapDetail: 'Cần giúp Linh nhận ra trọng tâm đề bài để đạt mục tiêu bài viết.' };
-                if (cid === 6) return { passed: cpSet.has('scaffold_tuan') && cpSet.has('check_linh'), quote: pickQuote(['start small', 'want to be', 'read the question', 'whose job']), gapDetail: 'Cần đặt câu hỏi gợi mở và khung câu từng bước dựa trên khoa học giáo dục.' };
+                if (cid === 1) return { passed: cpSet.has('check_linh'), quote: pickQuote(['linh', 'đọc lại đề', 'nghề của ai', 'câu hỏi']), gapDetail: 'Cần giúp Linh nhận ra trọng tâm đề bài để đạt mục tiêu bài viết.' };
+                if (cid === 6) return { passed: cpSet.has('scaffold_tuan') && cpSet.has('check_linh'), quote: pickQuote(['từng bước nhỏ', 'muốn trở thành', 'đọc lại đề', 'nghề của ai']), gapDetail: 'Cần đặt câu hỏi gợi mở và khung câu từng bước dựa trên khoa học giáo dục.' };
             }
             if (scenarioId === 5) {
-                if (cid === 5) return { passed: !negIds.has('ignore_laugh') && (cpSet.has('set_norm') || cpSet.has('support_thao')), quote: pickQuote(['hold on', 'không cười', 'mistakes', 'thảo', 'bạn khác']), gapDetail: 'Cần đặt chuẩn mực an toàn lớp học, bảo vệ em bị cười chê.' };
-                if (cid === 2) return { passed: !negIds.has('ignore_laugh') && !negIds.has('harsh_scold_quan') && (cpSet.has('support_thao') || cpSet.has('normalize_word')), quote: pickQuote(['thảo', 'with me', 'together', 'vô duyên', 'kiểm điểm']), gapDetail: 'Cần đối xử công bằng, tôn trọng với cả Thảo và Quân.' };
-                if (cid === 4) return { passed: !negIds.has('harsh_scold_quan') && !hasNegBranch && (cpSet.has('set_norm') || cpSet.has('redirect_quan') || this.step3Resolved), quote: pickQuote(['hold on', 'not at people', 'vô duyên', 'quân im']), gapDetail: 'Cần mẫu mực, giữ bình tĩnh khi uốn nắn hành vi trêu đùa.' };
-                if (cid === 3) return { passed: cpSet.has('normalize_word') || cpSet.has('redirect_quan'), quote: pickQuote(['vej', 'vegetable', 'quân', 'energy', 'next part']), gapDetail: 'Cần giúp cả lớp luyện chung từ khó và hướng năng lượng của Quân tích cực.' };
+                if (cid === 5) return { passed: !negIds.has('ignore_laugh') && (cpSet.has('set_norm') || cpSet.has('support_thao')), quote: pickQuote(['dừng một chút', 'không cười', 'không cười nhạo', 'sai là bình thường', 'thảo', 'bạn khác']), gapDetail: 'Cần đặt chuẩn mực an toàn lớp học, bảo vệ em bị cười chê.' };
+                if (cid === 2) return { passed: !negIds.has('ignore_laugh') && !negIds.has('harsh_scold_quan') && (cpSet.has('support_thao') || cpSet.has('normalize_word')), quote: pickQuote(['thảo', 'cùng cô', 'cùng đọc', 'vô duyên', 'kiểm điểm']), gapDetail: 'Cần đối xử công bằng, tôn trọng với cả Thảo và Quân.' };
+                if (cid === 4) return { passed: !negIds.has('harsh_scold_quan') && !hasNegBranch && (cpSet.has('set_norm') || cpSet.has('redirect_quan') || this.step3Resolved), quote: pickQuote(['dừng một chút', 'không cười nhạo', 'vô duyên', 'quân im']), gapDetail: 'Cần mẫu mực, giữ bình tĩnh khi uốn nắn hành vi trêu đùa.' };
+                if (cid === 3) return { passed: cpSet.has('normalize_word') || cpSet.has('redirect_quan'), quote: pickQuote(['ngút ngát', 'cùng đọc', 'quân', 'giọng khỏe', 'đoạn sau']), gapDetail: 'Cần giúp cả lớp luyện chung từ khó và hướng năng lượng của Quân tích cực.' };
             }
 
             return {
@@ -1214,14 +1261,36 @@
         speakToneSample: function (idx) {
             const sc = this.activeScenario;
             if (!sc || !sc.step13Tones || !sc.step13Tones[idx] || !window.SpeechEngine) return;
+            
+            // Dừng micro ngay lập tức để không thu âm loa máy tính gây nói đè
+            if (window.SpeechEngine.isListening) {
+                window.SpeechEngine.stopListening();
+            }
+            window.SpeechEngine.stopSpeaking();
+
             const t = this.selectedTeacher;
             const toneObj = sc.step13Tones[idx];
             window.SpeechEngine.speak(toneObj.text, {
-                speaker: toneObj.tone,
-                gender: t.hairStyle === 'male' ? 'male' : 'female',
+                speaker: this.teacherDisplayName || t.displayName || toneObj.tone,
+                gender: (t.gender || t.hairStyle) === 'male' ? 'male' : 'female',
                 forceLang: 'vi-VN',
                 pitch: t.voicePitch || 1.0,
-                rate: t.voiceRate || 1.0
+                rate: t.voiceRate || 1.0,
+                onEnd: () => {
+                    // Sau khi câu mẫu đọc xong hoàn toàn, học sinh mới phản hồi
+                    setTimeout(() => {
+                        if (this.flowStep === 13 && window.SpeechEngine) {
+                            const st0 = sc.students && sc.students[0];
+                            window.SpeechEngine.speak('Dạ vâng, em hiểu rồi ạ!', {
+                                speaker: st0 ? st0.name : 'Học sinh',
+                                gender: st0 ? (st0.gender || 'female') : 'female',
+                                isStudent: true,
+                                forceLang: 'vi-VN',
+                                pitch: 1.15
+                            });
+                        }
+                    }, 400);
+                }
             });
             // Điền nhanh vào câu thử lại nếu đang test không có mic
             this.step13RetryText = toneObj.text;
@@ -1426,8 +1495,8 @@
                 <div class="mp-shell">
                     <header class="mp-topbar">
                         <div class="mp-brand">
-                            <span class="mp-brand-logo">MP</span>
-                            <span>Mô phỏng Sư phạm</span>
+                            <span class="mp-brand-logo">TL</span>
+                            <span>ULIS TeachLab</span>
                         </div>
                         <nav class="mp-stage-stepper">${stagePillsHtml}</nav>
                         <div class="mp-topbar-right" aria-hidden="true"></div>
@@ -1565,7 +1634,13 @@
                 `;
             }).join('');
 
-            const voiceRadios = this.voiceModes.map(v => {
+            // Lọc giọng nói phù hợp với giới tính nhân vật giáo viên đang chọn (Giáo viên nữ -> chỉ hiện Giọng nữ & Giọng thật; Giáo viên nam -> chỉ hiện Giọng nam & Giọng thật)
+            const allowedVoiceModes = this.voiceModes.filter(v => {
+                if (v.id === 'real_voice' || v.gender === 'all') return true;
+                return (v.gender || (v.id.startsWith('male') ? 'male' : 'female')) === currentGender;
+            });
+
+            const voiceRadios = allowedVoiceModes.map(v => {
                 const selected = this.selectedVoiceId === v.id;
                 return `
                     <div class="mp-radio-opt ${selected ? 'selected' : ''}" onclick="window.ScenarioSystem.selectTeacherVoice('${v.id}')">
@@ -2262,7 +2337,7 @@
             const rightDockBtn = this.flowStep === 6
                 ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.goToFlowStep(7)">Tiếp: Tình huống ▶</button>`
                 : (this.flowStep === 7
-                    ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.advanceAfterStep7()">${this.selectedMode === 'realistic' ? 'Xử lý ngay ▶' : 'Nhận diện tình huống ▶'}</button>`
+                    ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.advanceAfterStep7()">${this.selectedMode === 'realistic' ? 'Xử lý ngay (Bước 9) ▶' : 'Nhận diện tình huống (Bước 8) ▶'}</button>`
                     : (this.selectedMode === 'guided'
                         ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.requestHintInStep9()">Xin gợi ý</button>`
                         : `<span id="c3d-silence-badge" class="c3d-pill-dark" style="border-color:#ef4444;color:#fca5a5;">⏳ Thời gian thực (7s)</span>`));
@@ -2270,6 +2345,7 @@
             const centerBannerHtml = (!isModalOverlayStep && this.hintBannerText) ? `
                 <div class="c3d-center-banner">
                     <span>${escapeHtml(this.hintBannerText)}</span>
+                    <button class="c3d-action-btn" style="padding:4px 10px;font-size:11.5px;background:rgba(255,255,255,0.2);" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại tình huống">↺ Nghe lại</button>
                     ${this.flowStep === 7 && this.selectedMode === 'guided' ? `<button class="c3d-action-btn" style="padding:4px 10px;font-size:11.5px;" onclick="window.ScenarioSystem.advanceAfterStep7()">Nhận diện</button>` : ''}
                 </div>
             ` : '';
@@ -2277,12 +2353,14 @@
             panel.innerHTML = `
                 <div class="c3d-topbar">
                     <div style="display:flex; align-items:center; gap:8px;">
+                        <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.goToFlowStep(5)" title="Xem lại bối cảnh tình huống (Bước 5)">⬅ Bối cảnh</button>
+                        <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại mở đầu & phản ứng của học sinh">↺ Nghe lại</button>
                         <span class="c3d-pill-dark">⏱ <span id="c3d-timer-val">${formatClock(this.sessionElapsedSec)} / ${formatClock(this.sessionDurationSec)}</span>${pauseSuffix}</span>
                         <span class="c3d-pill-mode ${this.selectedMode === 'realistic' ? 'c3d-pill-challenge' : ''}">${modeLabel}</span>
                         <span class="c3d-pill-dark">${escapeHtml(bc.classLabel || '')} · ${escapeHtml((bc.unitName || '').split('(')[0].trim())}</span>
                     </div>
                     <div style="font-size:12.5px; color:#cbd5e1; font-weight:600;">
-                        Trong lớp học · ${escapeHtml((meta.title || '').replace(/\s*trong lớp\s*3D/i, ''))}
+                        ULIS TeachLab · ${escapeHtml((meta.title || '').replace(/\s*trong lớp\s*3D/i, ''))}
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ClassroomGame && window.ClassroomGame.openSettings && window.ClassroomGame.openSettings()" title="Cài đặt hiển thị (Phím O)">⚙️</button>
@@ -2297,7 +2375,7 @@
                         ${drawerHtml}
                     </div>
                     <div class="c3d-bottom-dock">
-                        <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
                             <button id="c3d-mic-btn" class="c3d-mic-btn ${listening ? 'listening' : ''}" onclick="window.ScenarioSystem.toggleMic('main')" title="Bật/Tắt Micro (Hoặc giữ Space)">🎙️</button>
                             <div style="display:flex; flex-direction:column;">
                                 <span id="c3d-mic-label" style="font-size:12.5px; font-weight:700; color:#e2e8f0;">${listening ? 'Đang nghe bạn nói...' : 'Giữ Space để nói'}</span>
@@ -2305,12 +2383,13 @@
                                     🌐 ${curLang === 'en-US' ? 'English (en-US)' : 'Tiếng Việt (vi-VN)'}
                                 </button>
                             </div>
+                            <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại mở đầu & đối thoại học sinh">↺ Nghe lại</button>
                         </div>
 
                         <div class="c3d-speech-bar">
                             <input id="c3d-speech-input" type="text" class="c3d-speech-input"
                                 value="${escapeHtml(this.draftUtterance)}"
-                                placeholder="${lastLog ? `${escapeHtml(lastLog.speaker)}: ${escapeHtml(lastLog.text.slice(0, 68))}` : 'Nói bằng Space hoặc nhập câu xử lý (Enter để gửi)...'}"
+                                placeholder="${lastLog ? `${escapeHtml(lastLog.speaker)}: ${escapeHtml(lastLog.text.slice(0, 68))}` : 'Nói bằng Space hoặc nhập câu xử lý sư phạm (Enter để gửi)...'}"
                                 onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ScenarioSystem.submitTeacherUtterance(); }">
                             <button class="c3d-pill-dark" style="background:#2563eb;border-color:#38bdf8;cursor:pointer;"
                                 onclick="window.ScenarioSystem.submitTeacherUtterance()">Gửi</button>

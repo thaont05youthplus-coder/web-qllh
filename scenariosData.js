@@ -4,75 +4,75 @@
 (function () {
     'use strict';
 
-    // Bộ 8 tiêu chí chung theo Luật Nhà giáo số 73/2025/QH15
+    // Bộ 8 tiêu chí chung kết hợp Luật Nhà giáo số 73/2025/QH15, Thông tư 03/2026/TT-BGDĐT & Chuẩn nghề nghiệp giáo viên phổ thông
     const LAW_2025_CRITERIA = {
         1: {
             id: 1,
             name: 'Tổ chức giảng dạy có chất lượng',
-            citation: 'Điều 7 khoản 2 điểm a; Điều 9 khoản 2 điểm a Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 9 khoản 2 điểm a',
-            passDesc: 'Hoạt động đi đúng mục tiêu tiết học, không lãng phí thời gian.',
-            failDesc: 'Mục tiêu bài bị bỏ dở, lớp mất nhiều thời gian vì tình huống.'
+            citation: 'Điều 7 k2.a, Điều 9 k2.a Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 4); Chuẩn NNGV (Tiêu chuẩn 2, Điều 9/12/15)',
+            shortRef: 'Luật Nhà giáo Đ9 k2.a & Chuẩn NNGV',
+            passDesc: 'Hoạt động đi đúng mục tiêu tiết học, bảo đảm tiến độ và chất lượng sư phạm theo chuẩn nghề nghiệp.',
+            failDesc: 'Mục tiêu bài bị bỏ dở, lớp mất nhiều thời gian hoặc giáo viên chểnh mảng không duy trì tiến trình bài học.'
         },
         2: {
             id: 2,
             name: 'Tôn trọng, công bằng với người học',
-            citation: 'Điều 9 khoản 2 điểm d; Điều 11 khoản 2 điểm a Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 9 khoản 2 điểm d và Điều 11 khoản 2 điểm a',
-            passDesc: 'Lời nói tôn trọng; mọi học sinh có cơ hội như nhau.',
-            failDesc: 'Xúc phạm, chế giễu, làm bẽ mặt, chỉ chú ý vài em.'
+            citation: 'Điều 8 k2.a, Điều 9 k2.d, Điều 11 k2.a Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 5 k1: Tôn trọng sự khác biệt, không định kiến phân biệt đối xử)',
+            shortRef: 'Luật Nhà giáo Đ8 k2.a, Đ9 k2.d & TT 03/2026 Đ5',
+            passDesc: 'Ngôn từ tôn trọng, bao dung; trao cơ hội học tập công bằng cho mọi học sinh, không định kiến hay trù dập.',
+            failDesc: 'Xúc phạm nhân phẩm, chế giễu, làm bẽ mặt trước lớp hoặc phân biệt đối xử giữa các học sinh.'
         },
         3: {
             id: 3,
             name: 'Phát huy phẩm chất, năng lực người học',
-            citation: 'Điều 7 khoản 1; Điều 9 khoản 2 điểm c Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 9 khoản 2 điểm c',
-            passDesc: 'Hỗ trợ theo năng lực từng em; em giỏi có việc để phát triển, em yếu có bậc để bước lên.',
-            failDesc: 'Bỏ mặc em yếu hoặc dập tắt em giỏi.'
+            citation: 'Điều 7 k1, Điều 9 k2.c Luật Nhà giáo số 73/2025/QH15; Chuẩn NNGV (Tiêu chí 4 & 5: Dạy học phân hóa, phát triển năng lực)',
+            shortRef: 'Luật Nhà giáo Đ9 k2.c & Chuẩn NNGV Dạy học phân hóa',
+            passDesc: 'Dạy học phân hóa và cấp giàn giáo phù hợp: học sinh giỏi có nhiệm vụ mở rộng, học sinh gặp khó khăn có bậc thang hỗ trợ để tiến bộ.',
+            failDesc: 'Áp dụng cào bằng một mức yêu cầu, bỏ mặc học sinh đuối sức hoặc dập tắt sự hứng thú của học sinh nổi trội.'
         },
         4: {
             id: 4,
             name: 'Mẫu mực, nêu gương',
-            citation: 'Điều 7 khoản 1; Điều 9 khoản 2 điểm b Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 9 khoản 2 điểm b',
-            passDesc: 'Bình tĩnh, ngôn ngữ chuẩn mực.',
-            failDesc: 'Nóng giận, mỉa mai, tranh cãi với học sinh trước lớp.'
+            citation: 'Điều 8 k2.a, Điều 9 k2.b Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 4: Chuẩn mực, gương mẫu, bao dung); Chuẩn NNGV (Điều 6 Đạo đức nhà giáo)',
+            shortRef: 'Luật Nhà giáo Đ8 k2, Đ9 k2.b & TT 03/2026 Đ4',
+            passDesc: 'Giữ thái độ điềm tĩnh, tác phong đĩnh đạc, ngôn ngữ mô phạm chuẩn mực làm gương cho học sinh noi theo.',
+            failDesc: 'Nóng nảy, mất kiểm soát cảm xúc, to tiếng mỉa mai hoặc sa vào tranh cãi tay đôi với học sinh trước lớp.'
         },
         5: {
             id: 5,
             name: 'Môi trường giáo dục an toàn, dân chủ',
-            citation: 'Điều 9 khoản 2 điểm e Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 9 khoản 2 điểm e',
-            passDesc: 'Học sinh dám hỏi, dám sai, được lắng nghe.',
-            failDesc: 'Học sinh sợ hãi, im lặng, bị cười chê mà không được bảo vệ.'
+            citation: 'Điều 9 k2.e, Điều 35 k3 Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 5 k3: Bảo đảm an toàn thể chất và tinh thần); Chuẩn NNGV (Tiêu chuẩn 4: Môi trường an toàn, thân thiện)',
+            shortRef: 'Luật Nhà giáo Đ9 k2.e, Đ35 k3 & TT 03/2026 Đ5 k3',
+            passDesc: 'Xây dựng không khí học tập an toàn tâm lý: học sinh dám hỏi, dám sai để học, được bảo vệ khi bị bạn bè trêu chọc.',
+            failDesc: 'Để học sinh sợ hãi, co cụm, bị bạn chế giễu hoặc bị cô lập trong lớp học mà không có biện pháp bảo vệ kịp thời.'
         },
         6: {
             id: 6,
             name: 'Áp dụng khoa học giáo dục',
-            citation: 'Điều 9 khoản 2 điểm đ Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 9 khoản 2 điểm đ',
-            passDesc: 'Dùng cách làm có cơ sở (làm mẫu, cho thời gian suy nghĩ, gợi ý từng bước).',
-            failDesc: 'Xử lý cảm tính, lặp lại cách đã không hiệu quả.'
+            citation: 'Điều 7 k1, Điều 9 k2.đ Luật Nhà giáo số 73/2025/QH15; Chuẩn NNGV (Tiêu chuẩn 2: Phương pháp dạy học và giáo dục tích cực)',
+            shortRef: 'Luật Nhà giáo Đ9 k2.đ & Chuẩn NNGV Phương pháp tích cực',
+            passDesc: 'Vận dụng phương pháp giáo dục tích cực có cơ sở khoa học (làm mẫu trực quan, câu hỏi kiểm tra mức độ hiểu ICQs, thời gian chờ suy nghĩ Think-time).',
+            failDesc: 'Điều hành theo cảm tính, lặp lại mệnh lệnh đã không hiệu quả hoặc thiếu kỹ thuật sư phạm cơ bản.'
         },
         7: {
             id: 7,
-            name: 'Nhận xét, xử lý kỷ luật đúng quy định',
-            citation: 'Điều 8 khoản 2 điểm a Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 8 khoản 2 điểm a',
-            passDesc: 'Dựa trên nội quy, quy chế đã có.',
-            failDesc: 'Tự đặt hình thức xử lý ngoài quy định.'
+            name: 'Nhận xét, xử lý kỷ luật tích cực đúng quy định',
+            citation: 'Điều 8 k2.a Luật Nhà giáo số 73/2025/QH15; TT 03/2026/TT-BGDĐT (Điều 5 k4: Kỷ luật tích cực, giáo dục bằng lòng nhân ái); Điều 3/4/5 Nhiệm vụ giáo viên',
+            shortRef: 'Luật Nhà giáo Đ8 k2.a & TT 03/2026 Đ5 k4 Kỷ luật tích cực',
+            passDesc: 'Xử lý hành vi dựa trên nội quy lớp học đã thống nhất, dùng biện pháp kỷ luật tích cực nhằm giáo dục uốn nắn thay vì trừng phạt.',
+            failDesc: 'Tự đặt ra hình phạt ngoài quy định, bêu tên phạt đứng góc hoặc tịch thu tài sản trái phép.'
         },
         8: {
             id: 8,
-            name: 'Tự đánh giá sau buổi luyện',
-            citation: 'Điều 13 khoản 4 Luật Nhà giáo số 73/2025/QH15',
-            shortRef: 'Điều 13 khoản 4',
-            passDesc: 'Nêu được điểm làm tốt, điểm cần sửa và cách sửa cụ thể.',
-            failDesc: 'Chỉ nhận xét chung chung.'
+            name: 'Tự đánh giá và nâng cao năng lực nghề nghiệp',
+            citation: 'Điều 13 k4 Luật Nhà giáo số 73/2025/QH15; Chuẩn NNGV (Tiêu chuẩn 1, Tiêu chí 2: Tự học, tự bồi dưỡng phát triển chuyên môn)',
+            shortRef: 'Luật Nhà giáo Điều 13 khoản 4 & Chuẩn NNGV',
+            passDesc: 'Tự phản tư sâu sắc sau buổi dạy: chỉ rõ hành động đã làm tốt, điểm hạn chế theo quy định pháp luật và phương án cải thiện cụ thể.',
+            failDesc: 'Tự nhận xét qua loa, hình thức hoặc không nhận ra mối liên hệ giữa hành vi xử lý sư phạm với quyền lợi của học sinh.'
         }
     };
 
-    // 5 Tình huống mô phỏng theo đúng kịch bản
+    // 5 Tình huống mô phỏng theo đúng kịch bản quản lý lớp học thực tế (100% Tiếng Việt)
     const SCENARIOS_5 = [
         {
             id: 1,
@@ -81,13 +81,13 @@
             group: 'Tổ chức và quy trình',
             grade: 'Tiểu học – lớp 4',
             duration: '5 phút',
-            visibleContext: 'Bạn vừa dạy xong mẫu câu "What do you like doing? – I like …ing". Nhiệm vụ: tổ chức hoạt động hỏi – đáp theo cặp trong 3 phút, sau đó gọi một cặp trình bày.',
+            visibleContext: 'Bạn vừa hướng dẫn xong hoạt động trao đổi về sở thích và ước mơ. Nhiệm vụ: tổ chức cho học sinh hỏi – đáp theo cặp trong 3 phút, sau đó mời một cặp lên chia sẻ trước lớp.',
             blindContext: {
                 classLabel: 'Lớp 4A',
-                unitName: 'Sở thích (Hobbies)',
-                objective: 'Học sinh hỏi – đáp đúng mẫu câu “What do you like doing? – I like …ing” theo cặp.',
+                unitName: 'Sở thích và Ước mơ',
+                objective: 'Học sinh hỏi – đáp mạch lạc về sở thích theo cặp trong 3 phút.',
                 teacherTask: 'Giao nhiệm vụ hỏi – đáp theo cặp trong 3 phút, sau đó gọi một cặp trình bày trước lớp.',
-                warmupPrompt: 'Chào cả lớp! Hôm nay cô trò mình cùng luyện mẫu câu hỏi về sở thích nhé!',
+                warmupPrompt: 'Chào cả lớp! Bây giờ các em hãy quay sang bạn bên cạnh, cùng hỏi đáp về sở thích trong vòng 3 phút nhé!',
                 seats: { bin: 'Bàn đầu, dãy giữa', na: 'Bàn đầu, bên cạnh Bin', ti: 'Bàn đầu, cạnh cửa sổ' }
             },
             step13Context: {
@@ -117,13 +117,13 @@
             ],
             initialSceneText: 'Cả lớp bắt đầu hoạt động nhưng Bin đã chạy sang bàn khác, Na đang lấy vở ra chép, còn Tí ngơ ngác giơ tay hỏi: "Cô ơi làm gì ạ?"',
             boardLesson: {
-                title: 'ENGLISH GRADE 4 — UNIT: HOBBIES',
-                subtitle: 'Pattern: "What do you like doing?" — "I like ...ing"',
-                task: 'Pairwork (Speaking): 3 minutes → Present to class',
+                title: 'TIẾNG VIỆT LỚP 4 — CHỦ ĐIỂM: SỞ THÍCH VÀ ƯỚC MƠ',
+                subtitle: 'Mẫu câu hỏi – đáp: "Sở thích của bạn là gì?" — "Mình thích..."',
+                task: 'Thảo luận theo cặp: Hỏi – đáp trong 3 phút → Trình bày trước lớp',
                 notes: [
-                    '• I like reading books.',
-                    '• I like playing football.',
-                    '• I like drawing pictures.'
+                    '• Mình thích đọc sách khoa học.',
+                    '• Mình thích chơi đá bóng cùng các bạn.',
+                    '• Mình thích vẽ tranh phong cảnh quê hương.'
                 ]
             },
             students: [
@@ -149,7 +149,7 @@
                     deskIndex: { row: 0, col: 1, seat: 1 },
                     hiddenProfile: 'Chăm chỉ nhưng hiểu nhầm là viết, lấy vở ra chép.',
                     initialPosture: 'writing',
-                    initialLine: 'Dạ... để em chép mẫu câu vào vở cho sạch đẹp ạ.',
+                    initialLine: 'Dạ... để em chép câu hỏi vào vở cho sạch đẹp ạ.',
                     voicePitch: 1.25,
                     voiceRate: 1.0
                 },
@@ -160,7 +160,7 @@
                     color: '#10b981',
                     gender: 'male',
                     deskIndex: { row: 0, col: 2, seat: 0 },
-                    hiddenProfile: 'Nghe không kịp, hỏi bằng tiếng Việt “Cô ơi làm gì ạ?” rồi ngồi chờ.',
+                    hiddenProfile: 'Nghe không kịp, hỏi “Cô ơi làm gì ạ?” rồi ngồi chờ.',
                     initialPosture: 'raising_hand',
                     initialLine: 'Cô ơi làm gì ạ?',
                     voicePitch: 1.3,
@@ -169,22 +169,22 @@
             ],
             step1: {
                 question: 'Bạn nhận diện vấn đề cốt lõi đang xảy ra trong lớp là gì?',
-                answer: 'Hướng dẫn chưa rõ, thiếu làm mẫu và kiểm tra mức độ hiểu, nên mỗi em làm một kiểu; lớp bắt đầu lộn xộn.',
+                answer: 'Hướng dẫn chưa rõ ràng, thiếu làm mẫu trực quan và kiểm tra mức độ hiểu, dẫn tới mỗi em làm một kiểu; trật tự lớp bắt đầu phân tán.',
                 expectedKeywords: ['hướng dẫn', 'chưa rõ', 'làm mẫu', 'kiểm tra', 'hiểu', 'mỗi em', 'lộn xộn', 'không rõ']
             },
-            step2Analysis: 'Học sinh lớp 4 chỉ nhớ được chỉ dẫn ngắn; một đoạn hướng dẫn dài bằng tiếng Anh dễ khiến các em bỏ lỡ. Lớp cũng chưa có tín hiệu dừng hay quy trình chuyển hoạt động.',
+            step2Analysis: 'Học sinh tiểu học chỉ nhớ được chỉ dẫn ngắn gọn từng bước; một đoạn hướng dẫn dài dễ khiến các em bối rối. Cần dùng tín hiệu dừng, làm mẫu trực quan trước lớp và đặt câu hỏi kiểm tra hiểu (ICQs) để cả lớp thống nhất hành động.',
             step3Samples: [
-                { label: 'Dừng lớp bằng tín hiệu', text: 'One, two, three — eyes on me!' },
-                { label: 'Làm mẫu với 1 học sinh', text: 'Watch me and Na. Na, what do you like doing? Great! Now your turn.' },
-                { label: 'Kiểm tra mức độ hiểu (ICQs)', text: 'Are we writing or speaking? Speaking! Who do you talk to? How many minutes?' },
-                { label: 'Nhắc ngắn tiếng Việt nếu cần', text: 'Hỏi bạn bên cạnh nhé, không viết vào vở.' },
-                { label: 'Giao việc cho Bin', text: 'Bin, you are the timekeeper. Tell me when three minutes are up.' }
+                { label: 'Dừng lớp bằng tín hiệu vỗ tay / khẩu lệnh', text: 'Một, hai, ba — cả lớp nhìn lên cô nào!' },
+                { label: 'Làm mẫu với 1 học sinh', text: 'Cả lớp chú ý nhìn cô và bạn Na làm mẫu nhé: Na ơi, sở thích của em là gì? Tốt lắm! Bây giờ đến lượt các em.' },
+                { label: 'Kiểm tra mức độ hiểu (ICQs)', text: 'Cả lớp cho cô biết: bây giờ chúng ta nói chuyện với bạn bên cạnh hay viết vào vở? Đúng rồi, chỉ nói thôi, không viết nhé!' },
+                { label: 'Nhắc rõ thời gian và đối tượng', text: 'Quay sang hỏi bạn ngồi ngay bên cạnh mình trong đúng 3 phút nhé.' },
+                { label: 'Giao việc trách nhiệm cho Bin', text: 'Bin ơi, hôm nay cô giao cho em làm nhóm trưởng phụ trách bấm giờ 3 phút cho cả nhóm nhé!' }
             ],
             checkpoints: [
-                { id: 'stop_signal', label: 'Dùng tín hiệu dừng lớp / thu hút chú ý', keywords: ['eyes on me', 'one two three', '1 2 3', 'dừng', 'nhìn cô', 'nhìn thầy', 'trật tự', 'listen', 'stop', 'chú ý'] },
-                { id: 'model_demo', label: 'Làm mẫu (demo) với 1 học sinh', keywords: ['làm mẫu', 'watch me', 'mẫu', 'example', 'demo', 'na, what do you', 'what do you like doing'] },
-                { id: 'check_icq', label: 'Kiểm tra hiểu (nói hay viết / hỏi ai / mấy phút)', keywords: ['writing or speaking', 'nói hay viết', 'không viết', 'viết vào vở', 'speaking', 'who do you', 'how many minutes', 'bạn bên cạnh', 'mấy phút', 'hiểu chưa', 'làm gì'] },
-                { id: 'assign_bin', label: 'Giao việc tích cực cho Bin (bấm giờ / timekeeper)', keywords: ['timekeeper', 'bấm giờ', 'đếm giờ', 'canh giờ', 'bin', '3 phút', 'three minutes', 'giúp cô'] }
+                { id: 'stop_signal', label: 'Dùng tín hiệu dừng lớp / thu hút chú ý', keywords: ['một hai ba', '1 2 3', 'nhìn cô', 'nhìn thầy', 'dừng', 'chú ý', 'trật tự', 'lắng nghe', 'mắt nhìn lên'] },
+                { id: 'model_demo', label: 'Làm mẫu với 1 học sinh', keywords: ['làm mẫu', 'nhìn cô và bạn na', 'cô và na làm mẫu', 'thầy và na làm mẫu', 'sở thích của em', 'ví dụ', 'mẫu'] },
+                { id: 'check_icq', label: 'Kiểm tra hiểu (nói hay viết / hỏi ai / mấy phút)', keywords: ['nói hay viết', 'chỉ nói', 'không viết', 'không viết vào vở', 'bạn bên cạnh', 'mấy phút', '3 phút', 'hiểu chưa', 'làm gì'] },
+                { id: 'assign_bin', label: 'Giao việc tích cực cho Bin (bấm giờ / nhóm trưởng)', keywords: ['bấm giờ', 'nhóm trưởng', 'canh giờ', 'đếm giờ', 'bin', '3 phút', 'giúp cô', 'giao cho bin'] }
             ],
             branches: [
                 {
@@ -204,7 +204,7 @@
                     id: 'repeat_louder',
                     label: 'Nói to hơn, nhắc lại y nguyên hướng dẫn',
                     sampleSpeech: 'Các em chú ý, làm việc theo cặp trong 3 phút đi, nhanh lên nào!',
-                    triggers: ['nhanh lên', 'làm việc theo cặp', 'pairwork', 'theo cặp đi', 'nghe lại nè'],
+                    triggers: ['nhanh lên', 'làm việc theo cặp', 'theo cặp đi', 'nghe lại nè', 'làm đi'],
                     reactions: {
                         bin: { posture: 'standing_restless', line: 'Em xong từ nãy rồi cô ơi!' },
                         na: { posture: 'writing', line: 'Dạ... vậy là vẫn chép vào vở đúng không ạ?' },
@@ -216,7 +216,7 @@
                 {
                     id: 'structured_positive',
                     label: 'Dùng tín hiệu dừng → làm mẫu → kiểm tra hiểu → giao việc cho Bin',
-                    sampleSpeech: 'One, two, three — eyes on me! Watch me and Na: Na, what do you like doing? Are we writing or speaking? Speaking! Hỏi bạn bên cạnh nhé, không viết vào vở. Bin, you are the timekeeper for 3 minutes!',
+                    sampleSpeech: 'Một, hai, ba — cả lớp nhìn lên cô nào! Cô và bạn Na làm mẫu nhé: Na ơi, sở thích của em là gì? Tốt lắm! Cả lớp chỉ nói với bạn bên cạnh, không viết vào vở nhé! Bin ơi, cô giao em làm người bấm giờ 3 phút cho cả bàn nhé!',
                     reactions: {
                         bin: { posture: 'happy_task', line: 'Dạ vâng! Em làm người bấm giờ 3 phút cho cả lớp nhé!' },
                         na: { posture: 'speaking_pair', line: 'À, nói chứ không viết ạ! Tí ơi, cậu thích làm gì nhất vào lúc rảnh thế?' },
@@ -226,8 +226,8 @@
                     feedbackSummary: 'Cả ba em làm đúng; Bin vui vì được giao việc “bấm giờ”. Đạt điều kiện kết thúc!'
                 }
             ],
-            lesson: 'Với học sinh nhỏ, “làm cho xem” hiệu quả hơn “giải thích cho nghe”.',
-            endCondition: 'Ít nhất 2/3 học sinh hỏi – đáp đúng mẫu câu trong thời gian quy định.',
+            lesson: 'Với học sinh nhỏ tuổi, “làm mẫu trực quan” luôn hiệu quả hơn nhiều so với chỉ “giải thích bằng lời”.',
+            endCondition: 'Ít nhất 2/3 học sinh hỏi – đáp đúng quy trình trong thời gian quy định.',
             lawCriteriaIds: [1, 6, 2, 5] // Điều 9 k2 a, đ, d, e
         },
 
@@ -238,13 +238,13 @@
             group: 'Điều phối sự tham gia',
             grade: 'THCS – lớp 7',
             duration: '6 phút',
-            visibleContext: 'Phần khởi động của bài về lối sống lành mạnh. Bạn đặt các câu hỏi thảo luận như “What do you do to stay healthy?”. Nhiệm vụ: cả ba học sinh đều nói được ít nhất một câu hoàn chỉnh.',
+            visibleContext: 'Phần khởi động tiết học về rèn luyện sức khỏe. Bạn đặt câu hỏi thảo luận: "Em thường làm gì mỗi ngày để giữ gìn sức khỏe?". Nhiệm vụ: điều phối để cả ba học sinh đều nói được ít nhất một câu hoàn chỉnh.',
             blindContext: {
                 classLabel: 'Lớp 7A',
-                unitName: 'Lối sống lành mạnh (Healthy living)',
+                unitName: 'Lối sống lành mạnh',
                 objective: 'Học sinh nói được 1–2 câu hoàn chỉnh về thói quen giữ sức khỏe của mình.',
                 teacherTask: 'Dẫn phần khởi động bằng câu hỏi thảo luận về thói quen giữ sức khỏe. Đảm bảo cả ba học sinh đều nói được ít nhất một câu.',
-                warmupPrompt: 'Chào cả lớp! Hôm nay chúng ta cùng thảo luận về thói quen sống lành mạnh nhé!',
+                warmupPrompt: 'Chào cả lớp! Để mở đầu buổi học hôm nay, cô muốn hỏi: Các em thường làm gì mỗi ngày để giữ gìn sức khỏe nào?',
                 seats: { huy: 'Bàn đầu, bên phải', lan: 'Bàn đầu, ở giữa', nam: 'Bàn đầu, cạnh cửa sổ' }
             },
             step13Context: {
@@ -274,13 +274,13 @@
             ],
             initialSceneText: 'Ngay câu hỏi đầu tiên, Huy giơ tay trả lời leo trước khi bạn kịp gọi ai. Lan cúi xuống im lặng, còn Nam quay mặt nhìn ra cửa sổ.',
             boardLesson: {
-                title: 'ENGLISH GRADE 7 — HEALTHY LIFESTYLE',
-                subtitle: 'Warm-up Discussion: "What do you do to stay healthy?"',
-                task: 'Goal: Every student says at least 1 complete sentence',
+                title: 'HOẠT ĐỘNG TRẢI NGHIỆM LỚP 7 — LỐI SỐNG LÀNH MẠNH',
+                subtitle: 'Câu hỏi thảo luận khởi động: "Em thường làm gì mỗi ngày để giữ gìn sức khỏe?"',
+                task: 'Mục tiêu: Mỗi học sinh trong lớp phát biểu được ít nhất 1 câu hoàn chỉnh',
                 notes: [
-                    '• I play sports / badminton.',
-                    '• I eat vegetables and fruit.',
-                    '• I sleep 8 hours a day.'
+                    '• Tập thể dục, chơi thể thao hàng ngày.',
+                    '• Ăn nhiều rau xanh, uống đủ nước.',
+                    '• Ngủ đủ 8 tiếng, không thức khuya.'
                 ]
             },
             students: [
@@ -326,22 +326,22 @@
             ],
             step1: {
                 question: 'Bạn nhận diện vấn đề đang diễn ra trong lớp là gì?',
-                answer: 'Sự tham gia không đồng đều: một em lấn át, hai em né tránh vì những lý do khác nhau (Lan sợ sai, Nam thiếu ngôn ngữ).',
+                answer: 'Sự tham gia không đồng đều: một em lấn át, hai em né tránh vì những lý do khác nhau (Lan sợ sai, Nam thiếu ý tưởng hoặc rụt rè).',
                 expectedKeywords: ['không đồng đều', 'lấn át', 'trả lời leo', 'né tránh', 'sợ sai', 'thiếu', 'một em', 'im lặng']
             },
-            step2Analysis: 'Khi giáo viên hỏi chung cả lớp và chờ người xung phong, em nhanh nhất sẽ luôn trả lời và các em còn lại quen với việc không phải nghĩ. Cần vừa mở cơ hội cho Lan và Nam, vừa giữ hứng thú cho Huy.',
+            step2Analysis: 'Khi giáo viên hỏi chung cả lớp và chờ người xung phong, em nhanh nhất sẽ luôn trả lời và các em còn lại quen với việc không phải suy nghĩ. Cần vừa mở cơ hội chuẩn bị cho Lan và Nam, vừa giữ hứng thú học tập tích cực cho Huy.',
             step3Samples: [
-                { label: 'Cho thời gian suy nghĩ (Think time)', text: 'Everyone, think for 30 seconds. Don’t say anything yet.' },
-                { label: 'Ghi nhận Huy & giữ lượt', text: 'Huy, great ideas! Can you hold the next one? I want to hear from Lan first.' },
-                { label: 'Giàn giáo (Scaffolding) cho Nam', text: 'Nam, do you play sports? Yes or no? Which sport? So say: I play football.' },
-                { label: 'Giảm áp lực cho Lan', text: 'Lan, talk to Nam first, then tell me Nam’s answer.' },
-                { label: 'Giao vai trò thư ký cho Huy', text: 'Huy, you’re our reporter — write down everyone’s ideas.' }
+                { label: 'Cho cả lớp 30 giây suy nghĩ chuẩn bị', text: 'Cả lớp ơi, tất cả cùng suy nghĩ trong 30 giây nhé, khoan giơ tay vội nào!' },
+                { label: 'Ghi nhận Huy và xin phép nhường lượt', text: 'Ý tưởng của Huy rất hay! Em giữ thêm câu trả lời đó nhé, lượt này cô muốn nghe Lan chia sẻ trước nào.' },
+                { label: 'Gợi ý giàn giáo từng bước cho Nam', text: 'Nam ơi, em có thích chơi môn thể thao nào vào buổi chiều không? Ví dụ như đá bóng hay đạp xe?' },
+                { label: 'Tạo cơ hội an toàn cho Lan', text: 'Lan trao đổi nhanh với bạn Nam bên cạnh nhé, rồi hai bạn cùng chia sẻ câu trả lời với cả lớp.' },
+                { label: 'Giao vai trò thư ký ghi chép cho Huy', text: 'Huy nhanh nhạy lắm! Hôm nay em làm thư ký lớp, giúp cô ghi lại các ý kiến hay của các bạn lên bảng nhé!' }
             ],
             checkpoints: [
-                { id: 'think_time', label: 'Cho thời gian suy nghĩ / thảo luận cặp trước khi gọi', keywords: ['30 giây', '30 seconds', 'suy nghĩ', 'think', 'chuẩn bị', 'thảo luận', 'talk to'] },
-                { id: 'ack_huy', label: 'Ghi nhận Huy và giao vai trò tích cực (reporter/ghi chép)', keywords: ['huy', 'great', 'tốt', 'hay', 'reporter', 'thư ký', 'ghi lại', 'write down', 'nhường', 'hold'] },
-                { id: 'scaffold_nam', label: 'Gợi ý từng bước (giàn giáo) cho Nam', keywords: ['nam', 'yes or no', 'play sports', 'thể thao', 'từng bước', 'gợi ý', 'say: i', 'bóng đá', 'một câu'] },
-                { id: 'support_lan', label: 'Mở cơ hội an toàn cho Lan chuẩn bị và trả lời', keywords: ['lan', 'đừng sợ', 'tự tin', 'chuẩn bị', 'chia sẻ', 'nói với bạn'] }
+                { id: 'think_time', label: 'Cho thời gian suy nghĩ / trao đổi cặp trước khi gọi', keywords: ['30 giây', 'suy nghĩ', 'chuẩn bị', 'khoan giơ tay', 'thảo luận', 'trao đổi với bạn'] },
+                { id: 'ack_huy', label: 'Ghi nhận Huy và giao vai trò tích cực (thư ký / ghi chép ý kiến)', keywords: ['huy', 'rất hay', 'tốt', 'thư ký', 'ghi lại', 'giúp cô', 'nhường lượt', 'giữ lại ý kiến'] },
+                { id: 'scaffold_nam', label: 'Gợi ý từng bước (giàn giáo) cho Nam', keywords: ['nam', 'thể thao', 'đá bóng', 'đạp xe', 'từng bước', 'gợi ý', 'câu ngắn', 'thoải mái nói'] },
+                { id: 'support_lan', label: 'Mở cơ hội an toàn cho Lan chuẩn bị và trả lời', keywords: ['lan', 'tự tin', 'chuẩn bị', 'chia sẻ', 'nói với bạn', 'trao đổi'] }
             ],
             branches: [
                 {
@@ -361,7 +361,7 @@
                     id: 'call_lan_suddenly',
                     label: 'Gọi thẳng Lan khi em chưa chuẩn bị',
                     sampleSpeech: 'Lan đứng dậy trả lời câu này cho cô xem nào!',
-                    triggers: ['lan đứng dậy', 'lan trả lời', 'mời lan', 'who can answer'],
+                    triggers: ['lan đứng dậy', 'lan trả lời', 'mời lan', 'gọi lan'],
                     reactions: {
                         huy: { posture: 'raising_hand', line: 'Để em trả lời thay cho ạ!' },
                         lan: { posture: 'head_down', line: 'Dạ... em... em run quá chưa biết nói thế nào ạ...' },
@@ -373,14 +373,14 @@
                 {
                     id: 'think_pair_scaffold',
                     label: 'Cho thời gian suy nghĩ → thảo luận cặp → giàn giáo cho Nam & giao vai cho Huy',
-                    sampleSpeech: 'Everyone, think for 30 seconds! Huy, great ideas — you’re our reporter, write down everyone’s ideas. Lan, talk to Nam first. Nam, do you play sports? Yes or no? Which sport? So say: I play football.',
+                    sampleSpeech: 'Cả lớp cùng suy nghĩ trong 30 giây nhé! Huy có nhiều ý tưởng rất hay — cô giao Huy làm thư ký ghi lại ý kiến của các bạn nhé. Lan trao đổi nhanh với Nam nào. Nam ơi, em có hay chơi đá bóng hay chạy bộ không? Em chia sẻ một thói quen với cô và cả lớp nhé!',
                     reactions: {
                         huy: { posture: 'happy_task', line: 'Dạ vâng! Em sẽ làm thư ký ghi lại ý kiến của các bạn ạ!' },
                         lan: { posture: 'speaking_pair', line: 'Em uống đủ nước mỗi ngày và hay chạy bộ buổi sáng cùng mẹ ạ!' },
                         nam: { posture: 'speaking_pair', line: 'Dạ có ạ! Em chơi đá bóng mỗi buổi chiều để giữ sức khỏe ạ!' }
                     },
                     success: true,
-                    feedbackSummary: 'Cả ba em đều nói được câu hoàn chỉnh; Huy vẫn hăng hái với vai trò phóng viên!'
+                    feedbackSummary: 'Cả ba em đều nói được câu hoàn chỉnh; Huy vẫn hăng hái với vai trò thư ký!'
                 }
             ],
             lesson: 'Học sinh im lặng không phải lúc nào cũng vì lười; cần tìm đúng lý do để hỗ trợ đúng cách.',
@@ -395,18 +395,18 @@
             group: 'Hành vi lệch chuẩn',
             grade: 'THPT – lớp 10',
             duration: '6 phút',
-            visibleContext: 'Cả lớp đang làm bài nghe điền từ. Nội quy lớp đã thống nhất: không dùng điện thoại khi làm bài. Nhiệm vụ: cả lớp hoàn thành bài nghe, tiết học không bị gián đoạn.',
+            visibleContext: 'Cả lớp đang làm bài nghe hiểu và ghi chép ý chính. Nội quy lớp đã thống nhất: không dùng điện thoại khi làm bài. Nhiệm vụ: cả lớp hoàn thành bài nghe, tiết học không bị gián đoạn.',
             blindContext: {
                 classLabel: 'Lớp 10A',
-                unitName: 'Luyện nghe (Listening Practice)',
-                objective: 'Hoàn thành bài nghe điền từ câu 1–5 mà không bị gián đoạn mạch nghe của cả lớp.',
+                unitName: 'Luyện nghe hiểu và ghi chép',
+                objective: 'Hoàn thành bài nghe hiểu và ghi lại các luận điểm chính mà không bị gián đoạn mạch học tập.',
                 teacherTask: 'Điều phối lớp làm bài nghe, giữ tập trung và duy trì nội quy không dùng điện thoại.',
-                warmupPrompt: 'Chào cả lớp! Bây giờ chúng ta tập trung nghe băng và điền từ câu 1 đến câu 5 nhé!',
+                warmupPrompt: 'Chào cả lớp! Bây giờ chúng ta tập trung lắng nghe bài nói và ghi lại 3 ý chính nhé!',
                 seats: { khoa: 'Bàn hai, bên phải', duc: 'Bàn hai, cạnh Khoa', vy: 'Bàn hai, cạnh cửa sổ' }
             },
             step13Context: {
                 issueLabel: 'Xử lý điện thoại làm gián đoạn bài nghe',
-                badExampleQuote: 'Dừng băng lại! Khoa nộp ngay điện thoại lên đây cho cô!',
+                badExampleQuote: 'Dừng bài lại! Khoa nộp ngay điện thoại lên đây cho cô!',
                 badConsequence: 'Khoa cãi lại trước lớp, không khí căng thẳng'
             },
             step13Tones: [
@@ -431,13 +431,13 @@
             ],
             initialSceneText: 'Khoảng 30 giây sau khi bài nghe bắt đầu, Khoa cúi xuống gầm bàn, ánh sáng màn hình điện thoại hắt lên mặt. Đức ngồi cạnh liếc sang cười khúc khích, còn Vy bắt đầu nhíu mày khó chịu.',
             boardLesson: {
-                title: 'ENGLISH GRADE 10 — LISTENING PRACTICE',
-                subtitle: 'Task: Listen and fill in the blanks (Questions 1–5)',
-                task: 'Class Rule: No mobile phones during listening',
+                title: 'NGỮ VĂN LỚP 10 — RÈN LUYỆN KỸ NĂNG NGHE HIỂU',
+                subtitle: 'Nhiệm vụ: Lắng nghe đoạn văn bản và ghi lại các luận điểm chính',
+                task: 'Nội quy lớp học: Không sử dụng điện thoại trong giờ nghe bài',
                 notes: [
-                    '1. The festival takes place in ________.',
-                    '2. Visitors can enjoy ________ music.',
-                    '3. Remember to bring ________.'
+                    '1. Luận điểm mở đầu về giá trị văn hóa truyền thống.',
+                    '2. Dẫn chứng thực tế và giải pháp giữ gìn bản sắc.',
+                    '3. Bài học liên hệ và hành động của giới trẻ.'
                 ]
             },
             students: [
@@ -488,21 +488,21 @@
             },
             step2Analysis: 'Học sinh lớp 10 rất nhạy cảm với việc bị “bắt lỗi” trước bạn bè. Mục tiêu là chấm dứt hành vi mà không dừng bài học và không biến chuyện nhỏ thành cuộc đối đầu trước lớp.',
             step3Samples: [
-                { label: 'Đi lại gần bàn Khoa, nhắc nhỏ riêng', text: 'Khoa, phone away, please. You can check words after the task.' },
-                { label: 'Nếu Khoa cãi, giữ bình tĩnh hẹn sau giờ', text: 'I hear you. Our rule is no phones during listening. Let’s talk after class.' },
-                { label: 'Kéo Đức về nhiệm vụ bài nghe', text: 'Đức, what do you have for question 3?' },
-                { label: 'Đưa cả lớp quay lại bài ngay', text: 'OK everyone, let’s check question 4.' }
+                { label: 'Đi lại gần bàn Khoa, nhắc nhỏ riêng', text: 'Khoa ơi, cất điện thoại vào cặp giúp cô nhé. Làm bài xong mình trao đổi sau.' },
+                { label: 'Nếu Khoa cãi, giữ bình tĩnh hẹn sau giờ', text: 'Cô nghe em nói rồi. Quy định của lớp là không dùng máy khi nghe bài. Cuối tiết cô trò mình trao đổi nhé.' },
+                { label: 'Kéo Đức về nhiệm vụ bài nghe', text: 'Đức ơi, luận điểm số 2 em ghi nhận được ý chính nào rồi?' },
+                { label: 'Đưa cả lớp quay lại bài ngay', text: 'Được rồi cả lớp, chúng ta tiếp tục theo dõi luận điểm số 3 nhé.' }
             ],
             checkpoints: [
-                { id: 'private_calm', label: 'Nhắc riêng ngắn gọn, giữ bình tĩnh (không quát trước lớp)', keywords: ['nhắc riêng', 'nhỏ', 'phone away', 'cất điện thoại', 'cất máy', 'after the task', 'bình tĩnh', 'sau giờ'] },
-                { id: 'refer_rule', label: 'Nhắc lại nội quy lớp đã thống nhất (không tự đặt hình phạt)', keywords: ['nội quy', 'quy định', 'rule', 'thống nhất', 'no phone', 'không dùng điện thoại'] },
-                { id: 'redirect_duc', label: 'Kéo Đức và cả lớp quay lại câu hỏi bài nghe', keywords: ['đức', 'question', 'câu', 'bài nghe', 'listening', 'quay lại', 'tập trung'] }
+                { id: 'private_calm', label: 'Nhắc riêng ngắn gọn, giữ bình tĩnh (không quát trước lớp)', keywords: ['nhắc riêng', 'nhỏ', 'cất điện thoại', 'cất máy', 'sau giờ', 'bình tĩnh', 'cuối tiết', 'vào cặp'] },
+                { id: 'refer_rule', label: 'Nhắc lại nội quy lớp đã thống nhất (không tự đặt hình phạt)', keywords: ['nội quy', 'quy định', 'thống nhất', 'không dùng điện thoại', 'quy chế'] },
+                { id: 'redirect_duc', label: 'Kéo Đức và cả lớp quay lại câu hỏi bài nghe', keywords: ['đức', 'luận điểm', 'câu', 'bài nghe', 'ý chính', 'quay lại', 'tập trung'] }
             ],
             branches: [
                 {
                     id: 'public_yell',
                     label: 'Dừng bài nghe, lớn tiếng yêu cầu nộp điện thoại trước lớp',
-                    sampleSpeech: 'Dừng băng lại! Khoa nộp ngay điện thoại lên đây cho cô, sao giờ nghe lại bấm máy!',
+                    sampleSpeech: 'Dừng bài lại! Khoa nộp ngay điện thoại lên đây cho cô, sao giờ nghe lại bấm máy!',
                     triggers: ['nộp điện thoại', 'tịch thu', 'dừng bài', 'đưa đây', 'ra khỏi lớp', 'viết kiểm điểm', 'quát'],
                     reactions: {
                         khoa: { posture: 'pouting', line: 'Em đang tra từ điển mà cô! Sao cô lại tịch thu máy em!' },
@@ -528,10 +528,10 @@
                 {
                     id: 'quiet_rule_redirect',
                     label: 'Vẫn cho bài nghe chạy, đi lại gần nhắc riêng theo nội quy & kéo Đức về nhiệm vụ',
-                    sampleSpeech: 'Khoa, phone away, please. Our rule is no phones during listening — we can talk after class. Đức, what do you have for question 3? OK everyone, let’s check question 4.',
+                    sampleSpeech: 'Khoa ơi, cất điện thoại vào cặp giúp cô nhé. Quy định lớp mình là không dùng điện thoại khi nghe bài, hết tiết cô trò mình trao đổi sau. Đức ơi, câu số 2 em chọn ý nào? Cả lớp cùng tập trung nghe câu tiếp theo nhé.',
                     reactions: {
                         khoa: { posture: 'attentive', line: 'Dạ... để em cất điện thoại vào cặp và nghe tiếp ạ.' },
-                        duc: { posture: 'writing', line: 'Dạ câu số 3 em điền xong rồi, em làm tiếp câu 4 đây ạ!' },
+                        duc: { posture: 'writing', line: 'Dạ câu số 2 em điền xong rồi, em làm tiếp câu 3 đây ạ!' },
                         vy: { posture: 'attentive', line: 'May quá, lớp yên tĩnh lại để nghe tiếp rồi ạ.' }
                     },
                     success: true,
@@ -550,13 +550,13 @@
             group: 'Hỗ trợ học tập',
             grade: 'THPT – lớp 11',
             duration: '7 phút',
-            visibleContext: 'Học sinh viết một đoạn văn khoảng 80 từ trả lời câu hỏi “What job would you like to do in the future, and why?” trong 10 phút. Bạn đi quanh lớp để hỗ trợ.',
+            visibleContext: 'Học sinh viết một đoạn văn ngắn khoảng 80 từ trả lời câu hỏi: "Ước mơ nghề nghiệp tương lai của em là gì, và vì sao em lựa chọn nghề đó?" trong 10 phút. Bạn đi quanh lớp để hỗ trợ.',
             blindContext: {
                 classLabel: 'Lớp 11A',
-                unitName: 'Nghề nghiệp tương lai (Future Jobs)',
-                objective: 'Mỗi học sinh viết được đoạn văn ngắn (~80 từ) đúng trọng tâm nghề nghiệp tương lai của bản thân.',
+                unitName: 'Nghề nghiệp tương lai',
+                objective: 'Mỗi học sinh viết được đoạn văn ngắn (~80 chữ) đúng trọng tâm nghề nghiệp tương lai của bản thân.',
                 teacherTask: 'Đi quan sát các bàn để hỗ trợ kịp thời tiến độ và chất lượng viết của từng học sinh.',
-                warmupPrompt: 'Cả lớp bắt đầu viết đoạn văn ngắn về nghề nghiệp tương lai nhé, cô sẽ đi quanh lớp hỗ trợ!',
+                warmupPrompt: 'Cả lớp bắt đầu viết đoạn văn ngắn về nghề nghiệp tương lai nhé, cô sẽ đi quanh lớp để hỗ trợ các em!',
                 seats: { mai: 'Bàn đầu, bên phải', tuan: 'Bàn hai, bên phải', linh: 'Bàn hai, cạnh cửa sổ' }
             },
             step13Context: {
@@ -586,12 +586,12 @@
             ],
             initialSceneText: 'Phút thứ 3, Mai đặt bút xuống quay sang nói chuyện với bạn; Tuấn ngồi nhìn tờ giấy trắng bóc; còn Linh đang viết rất chăm chú nhưng lại viết về nghề của bố mẹ.',
             boardLesson: {
-                title: 'ENGLISH GRADE 11 — WRITING (~80 WORDS)',
-                subtitle: 'Topic: "What job would you like to do in the future, and why?"',
-                task: 'Time: 10 minutes · Teacher circulates to support',
+                title: 'NGỮ VĂN LỚP 11 — VIẾT ĐOẠN VĂN NGHỊ LUẬN (~80 CHỮ)',
+                subtitle: 'Đề bài: "Ước mơ nghề nghiệp tương lai của em là gì, và vì sao?"',
+                task: 'Thời gian: 10 phút · Giáo viên quan sát hỗ trợ từng bàn',
                 notes: [
-                    '• Structure: Topic sentence → 2 reasons → Example',
-                    '• Useful: "I want to be a ... because ..."'
+                    '• Cấu trúc: Câu chủ đề → 2 lý do lựa chọn → Ví dụ liên hệ',
+                    '• Mẫu câu gợi ý: "Em mong muốn trở thành... bởi vì..."'
                 ]
             },
             students: [
@@ -642,15 +642,15 @@
             },
             step2Analysis: 'Một nhiệm vụ giống nhau cho cả lớp luôn tạo ra chênh lệch tốc độ. Nếu chỉ nhìn biểu hiện bên ngoài (ai đang viết, ai không), giáo viên sẽ bỏ sót Linh. Cần theo dõi tiến độ của từng em và hỗ trợ theo nhu cầu riêng.',
             step3Samples: [
-                { label: 'Giao nhiệm vụ mở rộng cho Mai', text: 'Great, you’re done! Now add one more reason with "because" and one real example.' },
-                { label: 'Khung gợi ý từng bước cho Tuấn', text: 'Let’s start small. What job do you like? Why? Write: I want to be a ... because ...' },
-                { label: 'Câu hỏi gợi mở để Linh tự phát hiện', text: 'Linh, can you read the question again for me? Whose job is it asking about?' },
-                { label: 'Nhắc chung cả lớp', text: 'Quick reminder, everyone: write about your future job.' }
+                { label: 'Giao nhiệm vụ mở rộng cho Mai', text: 'Mai làm tốt lắm! Em bổ sung thêm một lý do sâu sắc nữa và một ví dụ dự định rèn luyện thực tế nhé.' },
+                { label: 'Khung gợi ý từng bước cho Tuấn', text: 'Tuấn ơi, mình bắt đầu từng bước nhỏ nhé: em thích làm nghề gì nhất? Vì sao? Viết câu: Em muốn trở thành... bởi vì...' },
+                { label: 'Câu hỏi gợi mở để Linh tự phát hiện', text: 'Linh ơi, em đọc lại câu hỏi đề bài giúp cô nào: Đề đang hỏi về ước mơ nghề nghiệp của ai vậy em?' },
+                { label: 'Nhắc chung cả lớp', text: 'Cả lớp lưu ý nhé: chúng ta viết về ước mơ nghề nghiệp tương lai của chính bản thân mình.' }
             ],
             checkpoints: [
-                { id: 'extend_mai', label: 'Giao nhiệm vụ mở rộng cho Mai', keywords: ['mai', 'mở rộng', 'ví dụ', 'example', 'reason', 'lý do', 'add one more', 'viết thêm'] },
-                { id: 'scaffold_tuan', label: 'Đưa khung gợi ý câu mở đầu cho Tuấn', keywords: ['tuấn', 'what job', 'because', 'want to be', 'gợi ý', 'khung', 'start small', 'em thích nghề'] },
-                { id: 'check_linh', label: 'Kiểm tra và gợi mở để Linh tự đọc lại đề bài', keywords: ['linh', 'đọc lại đề', 'read the question', 'whose job', 'câu hỏi', 'nghề của ai', 'tương lai của em'] }
+                { id: 'extend_mai', label: 'Giao nhiệm vụ mở rộng cho Mai', keywords: ['mai', 'mở rộng', 'ví dụ', 'lý do', 'thêm', 'viết thêm'] },
+                { id: 'scaffold_tuan', label: 'Đưa khung gợi ý câu mở đầu cho Tuấn', keywords: ['tuấn', 'nghề gì', 'bởi vì', 'muốn trở thành', 'gợi ý', 'khung', 'từng bước nhỏ', 'em thích nghề'] },
+                { id: 'check_linh', label: 'Kiểm tra và gợi mở để Linh tự đọc lại đề bài', keywords: ['linh', 'đọc lại đề', 'câu hỏi', 'nghề của ai', 'tương lai của em', 'chính bản thân'] }
             ],
             branches: [
                 {
@@ -682,7 +682,7 @@
                 {
                     id: 'differentiated_support',
                     label: 'Giao mở rộng cho Mai, khung gợi ý cho Tuấn, hỏi Linh đọc lại đề',
-                    sampleSpeech: 'Mai, great job! Add one more reason with "because" and one real example. Tuấn, let’s start small: what job do you like? Write: I want to be a ... because ... Linh, can you read the question again — whose job is it asking about?',
+                    sampleSpeech: 'Mai làm tốt lắm, em viết thêm một lý do và một ví dụ dự định thực tế nhé! Tuấn ơi, mình bắt đầu từ câu ngắn: Em thích làm nghề gì? Hãy viết: Em muốn trở thành... bởi vì... Linh ơi, em đọc lại đề bài giúp cô xem đề đang hỏi về nghề nghiệp của ai nhé!',
                     reactions: {
                         mai: { posture: 'writing', line: 'Dạ! Em sẽ viết thêm một ví dụ thực tế nữa ạ!' },
                         tuan: { posture: 'writing', line: 'À, em nghĩ ra rồi! Em sẽ viết là mình muốn làm nhà thiết kế vì em thích vẽ ạ!' },
@@ -704,17 +704,17 @@
             group: 'Quan hệ và cảm xúc',
             grade: 'THCS – lớp 8',
             duration: '5 phút',
-            visibleContext: 'Các em đọc to từng đoạn của một bài hội thoại về đồ ăn. Bạn gọi Thảo đọc đoạn tiếp theo. Nhiệm vụ: hoàn thành phần đọc và giữ không khí lớp tích cực.',
+            visibleContext: 'Các em đọc to từng đoạn của một bài văn bản văn học giàu hình ảnh. Bạn gọi Thảo đọc đoạn tiếp theo. Nhiệm vụ: hoàn thành phần đọc và giữ không khí lớp học tôn trọng, tích cực.',
             blindContext: {
                 classLabel: 'Lớp 8B',
-                unitName: 'Đồ ăn & Sức khỏe (Healthy Food)',
-                objective: 'Hoàn thành phần đọc hội thoại to trước lớp, giữ tâm lý an toàn và tôn trọng lẫn nhau.',
-                teacherTask: 'Mời Thảo đọc đoạn hội thoại và điều phối cả lớp lắng nghe, luyện phát âm tự tin.',
-                warmupPrompt: 'Cả lớp cùng luyện đọc to đoạn hội thoại về đồ ăn nhé. Thảo đọc giúp cô đoạn tiếp theo nào!',
+                unitName: 'Luyện đọc diễn cảm văn bản',
+                objective: 'Hoàn thành phần đọc diễn cảm to trước lớp, giữ tâm lý an toàn và tôn trọng lẫn nhau.',
+                teacherTask: 'Mời Thảo đọc đoạn văn bản và điều phối cả lớp lắng nghe, rèn luyện đọc tự tin.',
+                warmupPrompt: 'Cả lớp cùng luyện đọc diễn cảm đoạn văn bản nhé. Thảo đọc giúp cô đoạn tiếp theo nào!',
                 seats: { thao: 'Bàn đầu, bên phải', quan: 'Bàn hai, bên phải', ha: 'Bàn hai, cạnh Quân' }
             },
             step13Context: {
-                issueLabel: 'Học sinh bị cười nhại khi phát âm sai',
+                issueLabel: 'Học sinh bị cười nhại khi phát âm vấp',
                 badExampleQuote: 'Thôi Thảo ngồi xuống đi, mời bạn khác đọc tiếp cho nhanh.',
                 badConsequence: 'Thảo thu mình im lặng cả tiết, tiếng cười trêu chọc tiếp diễn'
             },
@@ -722,30 +722,30 @@
                 {
                     tone: 'Mềm mỏng',
                     toneColor: 'green',
-                    text: 'Cả lớp dừng một chút nhé. Trong lớp mình, nói nhầm là chuyện bình thường để tiến bộ. Thảo ơi, em muốn tự đọc tiếp hay đọc cùng cô nào?',
+                    text: 'Cả lớp dừng một chút nhé. Trong lớp mình, đọc nhầm hay vấp là chuyện bình thường để cùng tiến bộ. Thảo ơi, em muốn tự đọc tiếp hay đọc cùng cô nào?',
                     whyWorks: 'Bảo vệ Thảo bằng sự lựa chọn an toàn, không ép buộc nhưng trao lại tự tin.'
                 },
                 {
                     tone: 'Dứt khoát',
                     toneColor: 'blue',
-                    text: 'Dừng lại một chút! Lớp chúng ta tôn trọng nhau và không cười khi bạn phát âm chưa chuẩn. Bây giờ cả lớp cùng đọc chung từ này nhé!',
-                    whyWorks: 'Đặt lại chuẩn mực chung rõ ràng và biến từ khó thành luyện tập chung của cả lớp.'
+                    text: 'Dừng lại một chút! Lớp chúng ta tôn trọng nhau và không cười khi bạn đọc chưa trôi chảy. Bây giờ cả lớp cùng đọc chung câu này nhé!',
+                    whyWorks: 'Đặt lại chuẩn mực chung rõ ràng và biến câu khó thành luyện tập chung của cả lớp.'
                 },
                 {
                     tone: 'Hài hước',
                     toneColor: 'orange',
-                    text: 'Quân hôm nay nhiều năng lượng quá nhỉ! Giữ giọng khỏe đó giúp cô đóng vai nhân vật tiếp theo cho thật hào hứng nhé!',
+                    text: 'Quân hôm nay nhiều năng lượng quá nhỉ! Giữ giọng khỏe đó giúp cô đọc diễn cảm đoạn tiếp theo cho thật hào hứng nhé!',
                     whyWorks: 'Giảm căng thẳng, giữ thể diện cho Quân và chuyển sự hăng hái vào bài đọc.'
                 }
             ],
-            initialSceneText: 'Thảo phát âm từ "vegetable" thành "ve-ge-tây-bồ". Quân cười phá lên nhại lại, Hà cười hùa theo. Thảo dừng lại, cúi mặt nói nhỏ: "Em không đọc nữa đâu ạ."',
+            initialSceneText: 'Thảo đọc đến đoạn có từ láy "ngút ngát" thì bị ngắc ngứ và đọc vấp thành "ngút ngắt". Quân cười phá lên nhại lại, Hà cười hùa theo. Thảo dừng lại, cúi mặt nói nhỏ: "Em không đọc nữa đâu ạ."',
             boardLesson: {
-                title: 'ENGLISH GRADE 8 — READING ALOUD',
-                subtitle: 'Dialogue: Healthy Food & Cooking',
-                task: 'Focus Word: vegetable  /ˈvedʒ.tə.bəl/',
+                title: 'NGỮ VĂN LỚP 8 — LUYỆN ĐỌC DIỄN CẢM VĂN BẢN',
+                subtitle: 'Chủ đề: Tình yêu quê hương đất nước qua trang văn',
+                task: 'Rèn luyện: Đọc to, rõ ràng, ngắt nghỉ đúng ngữ điệu cảm xúc',
                 notes: [
-                    '• "First, wash the fresh vegetables carefully."',
-                    '• Pronunciation tip: VEJ-tuh-bul (3 syllables)'
+                    '• "Trước mắt chúng tôi là cánh đồng lúa chín ngút ngát mênh mông."',
+                    '• Chú ý phát âm chuẩn các từ láy và ngữ điệu cảm xúc.'
                 ]
             },
             students: [
@@ -756,9 +756,9 @@
                     color: '#f472b6',
                     gender: 'female',
                     deskIndex: { row: 0, col: 1, seat: 0 },
-                    hiddenProfile: 'Nhút nhát, dễ tổn thương; phát âm sai từ vegetable (đọc thành “ve-ge-tây-bồ”). Nếu được bảo vệ và động viên, em sẽ đọc tiếp.',
+                    hiddenProfile: 'Nhút nhát, dễ tổn thương; đọc vấp từ láy "ngút ngát". Nếu được bảo vệ và động viên, em sẽ đọc tiếp.',
                     initialPosture: 'head_down',
-                    initialLine: 'Ve-ge-tây-bồ... (cúi gằm mặt): Em không đọc nữa đâu ạ.',
+                    initialLine: 'Ngút ngắt... (cúi gằm mặt): Em không đọc nữa đâu ạ.',
                     voicePitch: 1.25,
                     voiceRate: 0.9
                 },
@@ -771,7 +771,7 @@
                     deskIndex: { row: 1, col: 1, seat: 0 },
                     hiddenProfile: 'Hay đùa, không ác ý; cười to và nhại lại. Nếu bị phê bình gắt trước lớp sẽ tự ái và thôi tham gia.',
                     initialPosture: 'peeking_laugh',
-                    initialLine: 'Haha! Ve-ge-tây-bồ nghe mắc cười quá đi!',
+                    initialLine: 'Haha! Ngút ngắt nghe mắc cười quá đi!',
                     voicePitch: 1.05,
                     voiceRate: 1.15
                 },
@@ -791,21 +791,21 @@
             ],
             step1: {
                 question: 'Bạn nhận diện vấn đề cảm xúc và quan hệ lớp học đang xảy ra là gì?',
-                answer: 'Một học sinh bị tổn thương và sự tôn trọng lẫn nhau trong lớp bị vi phạm. Nguy cơ lớn nhất: Thảo, và cả những em khác, sẽ sợ nói tiếng Anh vì sợ bị cười.',
+                answer: 'Một học sinh bị tổn thương và sự tôn trọng lẫn nhau trong lớp bị vi phạm. Nguy cơ lớn nhất: Thảo, và cả những em khác, sẽ sợ phát biểu trước lớp vì sợ bị bạn bè cười nhạo.',
                 expectedKeywords: ['tổn thương', 'tôn trọng', 'cười nhạo', 'nhại lại', 'sợ nói', 'an toàn', 'xấu hổ']
             },
-            step2Analysis: 'Cần làm ba việc cùng lúc: bảo vệ Thảo, đặt lại chuẩn mực chung cho cả lớp, và xử lý Quân mà không đẩy em vào thế đối đầu. Nếu chỉ tập trung phạt Quân, Thảo càng bị cả lớp chú ý và càng ngại.',
+            step2Analysis: 'Cần làm ba việc cùng lúc: bảo vệ Thảo, đặt lại chuẩn mực chung cho cả lớp, và uốn nắn Quân mà không đẩy em vào thế đối đầu. Nếu chỉ tập trung phạt Quân, Thảo càng bị cả lớp chú ý và càng thêm e ngại.',
             step3Samples: [
-                { label: 'Đặt chuẩn mực chung bình tĩnh', text: 'Hold on. In this class, mistakes are how we learn. We laugh with people, not at people.' },
-                { label: 'Biến lỗi cá nhân thành lỗi chung', text: 'Actually, this word is tricky for many people. Let’s all say it together: VEJ-tuh-bul.' },
-                { label: 'Trao quyền lựa chọn cho Thảo', text: 'Thảo, would you like to continue, or read the next line with me?' },
-                { label: 'Chuyển năng lượng Quân sang tích cực', text: 'Quân, you have great energy. Can you read the next part for us?' }
+                { label: 'Đặt chuẩn mực chung bình tĩnh', text: 'Cả lớp dừng một chút nhé. Trong lớp chúng ta, vấp hay nhầm là chuyện rất bình thường để học hỏi. Chúng ta cười cùng bạn chứ không cười nhạo bạn.' },
+                { label: 'Biến lỗi cá nhân thành luyện tập chung', text: 'Thực ra từ này rất dễ vấp với nhiều người. Cả lớp cùng luyện đọc to từ này với cô nào: ngút ngát!' },
+                { label: 'Trao quyền lựa chọn cho Thảo', text: 'Thảo ơi, em muốn tự đọc tiếp đoạn sau hay đọc cùng cô nào?' },
+                { label: 'Chuyển năng lượng Quân sang tích cực', text: 'Quân có giọng đọc rất vang khỏe. Em giúp cô đọc tiếp đoạn văn tiếp theo cho cả lớp nghe nhé!' }
             ],
             checkpoints: [
-                { id: 'set_norm', label: 'Đặt chuẩn mực chung "không cười khi bạn mắc lỗi"', keywords: ['hold on', 'không cười', 'not at people', 'mistakes', 'sai là bình thường', 'tôn trọng', 'chuẩn mực', 'dừng'] },
-                { id: 'normalize_word', label: 'Bình thường hóa từ khó (cả lớp cùng đọc vegetable)', keywords: ['tricky', 'together', 'cả lớp', 'cùng đọc', 'vej', 'vegetable', 'từ này khó'] },
-                { id: 'support_thao', label: 'Bảo vệ & trao lựa chọn cho Thảo đọc tiếp (hoặc đọc cùng cô)', keywords: ['thảo', 'continue', 'đọc tiếp', 'with me', 'cùng cô', 'cùng thầy', 'động viên'] },
-                { id: 'redirect_quan', label: 'Chuyển năng lượng của Quân tích cực (không mắng gắt)', keywords: ['quân', 'energy', 'next part', 'đọc đoạn', 'lần sau', 'cùng bạn'] }
+                { id: 'set_norm', label: 'Đặt chuẩn mực chung "không cười khi bạn mắc lỗi"', keywords: ['dừng một chút', 'không cười', 'không cười nhạo', 'sai là bình thường', 'vấp là bình thường', 'tôn trọng', 'chuẩn mực', 'dừng'] },
+                { id: 'normalize_word', label: 'Bình thường hóa từ khó (cả lớp cùng đọc ngút ngát)', keywords: ['cả lớp', 'cùng đọc', 'ngút ngát', 'từ này khó', 'cùng luyện'] },
+                { id: 'support_thao', label: 'Bảo vệ & trao lựa chọn cho Thảo đọc tiếp (hoặc đọc cùng cô)', keywords: ['thảo', 'đọc tiếp', 'cùng cô', 'cùng thầy', 'động viên', 'tự tin'] },
+                { id: 'redirect_quan', label: 'Chuyển năng lượng của Quân tích cực (không mắng gắt)', keywords: ['quân', 'giọng khỏe', 'đọc tiếp', 'đoạn sau', 'đoạn tiếp theo', 'cùng bạn'] }
             ],
             branches: [
                 {
@@ -837,18 +837,18 @@
                 {
                     id: 'norm_normalize_empower',
                     label: 'Dừng ngắn → đặt chuẩn mực → cả lớp cùng đọc → cho Thảo chọn & giao việc cho Quân',
-                    sampleSpeech: 'Hold on. In this class, mistakes are how we learn — we laugh with people, not at people. This word is tricky: let’s all say it together: VEJ-tuh-bul! Thảo, would you like to read the next line with me? Quân, you have great energy, can you read the next part for us?',
+                    sampleSpeech: 'Cả lớp dừng một chút nhé! Trong lớp chúng ta, đọc vấp là chuyện bình thường để tiến bộ. Cả lớp cùng luyện đọc to từ này với cô nào: ngút ngát! Thảo ơi, em muốn tự đọc tiếp hay đọc cùng cô một câu nào? Quân có giọng đọc rất vang, lát nữa em đọc tiếp đoạn sau cho cả lớp nghe nhé!',
                     reactions: {
-                        thao: { posture: 'speaking_pair', line: 'Dạ... vét-giơ-tơ-bồ. Em cảm ơn ạ, em xin đọc tiếp câu sau!' },
-                        quan: { posture: 'attentive', line: 'Mình xin lỗi Thảo nhé. Vét-giơ-tơ-bồ! Dạ để em đọc đoạn tiếp theo ạ!' },
-                        ha: { posture: 'attentive', line: 'Vét-giơ-tơ-bồ! Em sẽ tập trung theo dõi bài ạ.' }
+                        thao: { posture: 'speaking_pair', line: 'Dạ... ngút ngát. Em cảm ơn cô, em xin đọc tiếp câu sau ạ!' },
+                        quan: { posture: 'attentive', line: 'Mình xin lỗi Thảo nhé. Dạ để em đọc đoạn tiếp theo ạ!' },
+                        ha: { posture: 'attentive', line: 'Ngút ngát! Em sẽ tập trung theo dõi bài ạ.' }
                     },
                     success: true,
                     feedbackSummary: 'Thảo đọc tiếp tự tin; Quân và Hà thôi cười, Quân vẫn tham gia tích cực!'
                 }
             ],
-            lesson: 'Trong lớp ngoại ngữ, cảm giác an toàn khi mắc lỗi là điều kiện để học sinh dám nói.',
-            endCondition: 'Thảo đọc tiếp được ít nhất một câu; Quân không bị cô lập và vẫn tham gia.',
+            lesson: 'Trong lớp học, cảm giác an toàn khi mắc lỗi là điều kiện tiên quyết để học sinh dám chia sẻ và tiến bộ.',
+            endCondition: 'Thảo đọc tiếp được ít nhất một câu; Quân không bị cô lập và vẫn tham gia tích cực.',
             lawCriteriaIds: [5, 2, 4, 3] // Điều 9 k2 e, d, b, Điều 7 k1
         }
     ];
@@ -1337,9 +1337,9 @@
     ];
 
     const TEACHER_VOICE_MODES = [
-        { id: 'female_young', label: 'Giọng nữ, trẻ', pitch: 1.14, rate: 1.02, muteTeacherTts: false },
-        { id: 'male_young', label: 'Giọng nam, trẻ', pitch: 0.9, rate: 1.0, muteTeacherTts: false },
-        { id: 'real_voice', label: 'Dùng giọng thật của tôi', pitch: 1.0, rate: 1.0, muteTeacherTts: true }
+        { id: 'female_young', label: 'Giọng nữ, trẻ', gender: 'female', pitch: 1.14, rate: 1.02, muteTeacherTts: false },
+        { id: 'male_young', label: 'Giọng nam, trẻ', gender: 'male', pitch: 0.9, rate: 1.0, muteTeacherTts: false },
+        { id: 'real_voice', label: 'Dùng giọng thật của tôi', gender: 'all', pitch: 1.0, rate: 1.0, muteTeacherTts: true }
     ];
 
     // Danh mục cấp học cho Bước 3 (theo mockup PDF trang 3)

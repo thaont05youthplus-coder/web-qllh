@@ -252,9 +252,14 @@
                 audio.playbackRate = Math.min(1.15, Math.max(0.9, rawRate));
 
                 let settled = false;
+                let safetyTimer = null;
                 const finish = (ok) => {
                     if (settled) return;
                     settled = true;
+                    if (safetyTimer) {
+                        clearTimeout(safetyTimer);
+                        safetyTimer = null;
+                    }
                     if (this.currentAudio === audio) {
                         this.currentAudio = null;
                     }
@@ -266,12 +271,13 @@
                 audio.onended = () => finish(true);
                 audio.onerror = () => finish(false);
 
-                const estMs = Math.max(4000, item.text.length * 140);
-                setTimeout(() => {
+                // Timeout an toàn chỉ kích hoạt khi audio bị đơ hoàn toàn không bắn event onended
+                const safetyMs = Math.max(30000, (item.text.length * 350) + 10000);
+                safetyTimer = setTimeout(() => {
                     if (!settled && token === this.playbackToken && this.isSpeaking) {
                         finish(true);
                     }
-                }, estMs);
+                }, safetyMs);
 
                 const playPromise = audio.play();
                 if (playPromise && typeof playPromise.catch === 'function') {
