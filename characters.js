@@ -184,6 +184,27 @@
             char.nametag.material.needsUpdate = true;
         },
 
+        // Di chuyển học sinh đến bàn chỉ định (ví dụ Khoa dạt về góc cuối)
+        moveStudentDesk: function (studentId, deskIndex) {
+            const char = this.studentMap[studentId];
+            if (!char || !deskIndex) return;
+            const xSpacing = 2.6;
+            const zSpacing = 2.8;
+            const startX = -((4 - 1) * xSpacing) / 2;
+            const startZ = -1.2;
+
+            const row = (deskIndex.row !== undefined) ? deskIndex.row : 0;
+            const col = (deskIndex.col !== undefined) ? deskIndex.col : 1;
+            const seat = (deskIndex.seat !== undefined) ? deskIndex.seat : 0;
+
+            const deskX = startX + col * xSpacing;
+            const deskZ = startZ + row * zSpacing;
+            const seatXOffset = (seat === 0) ? -0.45 : 0.45;
+            const seatZOffset = 0.55;
+
+            char.mesh.position.set(deskX + seatXOffset, 0, deskZ + seatZOffset);
+        },
+
         setTeacherPersona: function (persona) {
             if (!this.teacher || !persona) return;
             if (this.teacher.suitMat && persona.suitColor !== undefined) {
@@ -566,6 +587,7 @@
                 linh: { skin: 0xffe0bd, hairColor: 0x1c1917, hairStyle: 'ponytail', vestColor: null, collarColor: 0xec4899, glasses: false, scarf: false },
                 thao: { skin: 0xffe4cb, hairColor: 0x451a03, hairStyle: 'braids', vestColor: null, collarColor: 0xf472b6, glasses: false, scarf: true },
                 quan: { skin: 0xedc9af, hairColor: 0x18181b, hairStyle: 'spiky', vestColor: null, collarColor: 0x0284c7, glasses: false, scarf: true },
+                minh: { skin: 0xf5d0a9, hairColor: 0x1e293b, hairStyle: 'parted', vestColor: 0x334155, collarColor: 0x3b82f6, glasses: false, scarf: true },
                 ha: { skin: 0xffe0bd, hairColor: 0x291d17, hairStyle: 'pigtails', vestColor: null, collarColor: 0x10b981, glasses: false, scarf: true }
             };
 

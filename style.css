@@ -2737,3 +2737,846 @@ body[data-flow-phase="classroom3d"] #crosshair {
         width: 240px;
     }
 }
+
+/* ==========================================================================
+   ULIS TEACHLAB · MOCKUP BẢN 2: STYLES CHO LUỒNG 14 BƯỚC & 3 NGUYÊN TẮC
+   ========================================================================== */
+
+/* 1. TOP STEPPER HEADER */
+.mp-top-stepper-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #7f1d1d;
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(127, 29, 29, 0.25);
+}
+.mp-stepper-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14.5px;
+}
+.mp-stepper-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #ffffff;
+    color: #991b1b;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 6px;
+}
+.mp-stepper-pills {
+    display: flex;
+    gap: 8px;
+}
+.mp-stepper-pill {
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fee2e2;
+}
+.mp-stepper-pill.active {
+    background: #ffffff;
+    color: #991b1b;
+    font-weight: 800;
+}
+.mp-stepper-subbadge {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fecaca;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+/* 2. CHẾ ĐỘ & BƯỚC 3 HAI CỘT TÌNH HUỐNG */
+.mp-mode-toggle-group {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+}
+.mp-mode-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.mp-mode-btn.selected {
+    background: #991b1b;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(153, 27, 27, 0.3);
+}
+
+.mp-category-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+.mp-category-column {
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #ffffff;
+}
+.mp-category-column:hover {
+    border-color: #cbd5e1;
+}
+.mp-category-column.active {
+    border-color: #991b1b;
+    box-shadow: 0 0 0 2px rgba(153, 27, 27, 0.15);
+}
+.mp-cat-icon {
+    font-size: 22px;
+}
+.mp-badge-tag {
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+}
+.mp-badge-tag.active {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.mp-badge-tag.ok {
+    background: #dcfce7;
+    color: #166534;
+}
+.mp-badge-tag.warn {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.mp-activities-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.mp-act-box {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    background: #f8fafc;
+    transition: all 0.15s;
+}
+.mp-act-box:hover {
+    background: #f1f5f9;
+}
+.mp-act-box.highlighted {
+    background: #fff1f2;
+    border-color: #fecdd3;
+}
+.mp-act-box.selected {
+    border-color: #991b1b;
+    background: #fee2e2;
+}
+.mp-act-step {
+    font-size: 10px;
+    font-weight: 800;
+    color: #991b1b;
+    display: block;
+    letter-spacing: 0.5px;
+}
+.mp-act-box p {
+    margin: 2px 0 0;
+    color: #64748b;
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+
+.mp-scenario-featured-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fef2f2;
+    border: 1.5px solid #f87171;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.mp-scenario-featured-card:hover {
+    background: #fee2e2;
+}
+
+/* NGUYÊN TẮC BADGES */
+.mp-principle-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.mp-principle-badge.p1 {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+.mp-principle-badge.p2 {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+.mp-principle-badge.p3 {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+/* 3. BƯỚC 5: PHÒNG MÔ PHỎNG */
+.mp-step5-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr 1.1fr;
+    gap: 14px;
+}
+.mp-plan-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.mp-plan-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #475569;
+    background: #f8fafc;
+}
+.mp-plan-step span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    font-weight: 800;
+    font-size: 11px;
+    color: #1e293b;
+}
+.mp-plan-step.active {
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 800;
+}
+.mp-plan-step.active span {
+    background: #991b1b;
+    color: #ffffff;
+}
+
+.mp-student-badge-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 12.5px;
+}
+.mp-student-badge-item .badge-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #991b1b;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 11px;
+}
+.mp-student-badge-item .sub {
+    margin-left: auto;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.mp-law-chips-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.mp-law-chip {
+    font-size: 12px;
+    color: #1e293b;
+    background: #f1f5f9;
+    padding: 5px 8px;
+    border-radius: 6px;
+    line-height: 1.35;
+}
+
+.mp-channel-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 12.5px;
+}
+.mp-channel-box span {
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+/* 4. HUD TRONG LỚP HỌC & 4 NHÓM HÀNH ĐỘNG */
+.c3d-tension-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.c3d-tension-indicator .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.c3d-tension-indicator.đang-tăng .dot {
+    background: #f97316;
+}
+.c3d-tension-indicator.đang-tăng strong {
+    color: #fdba74;
+}
+.c3d-tension-indicator.lớn .dot {
+    background: #ef4444;
+}
+.c3d-tension-indicator.lớn strong {
+    color: #fca5a5;
+}
+.c3d-tension-indicator.đang-giảm .dot {
+    background: #eab308;
+}
+.c3d-tension-indicator.đang-giảm strong {
+    color: #fde047;
+}
+.c3d-tension-indicator.nhỏ .dot {
+    background: #3b82f6;
+}
+.c3d-tension-indicator.nhỏ strong {
+    color: #93c5fd;
+}
+.c3d-tension-indicator.đã-lắng .dot {
+    background: #22c55e;
+}
+.c3d-tension-indicator.đã-lắng strong {
+    color: #86efac;
+}
+
+/* TOAST PHỤ HUYNH LỚP 8B */
+.c3d-parent-notify-toast {
+    position: absolute;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 1.5px solid #60a5fa;
+    border-radius: 12px;
+    padding: 10px 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    max-width: 580px;
+    width: 90%;
+    z-index: 100;
+    cursor: pointer;
+    animation: slideDownToast 0.3s ease-out;
+}
+@keyframes slideDownToast {
+    from { opacity: 0; transform: translate(-50%, -20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* THẺ NHẮC NHỞ TỨC THỜI */
+.c3d-instant-warning-card {
+    position: absolute;
+    top: 54px;
+    left: 20px;
+    background: #fef2f2;
+    border: 1.5px solid #ef4444;
+    border-radius: 12px;
+    padding: 12px 16px;
+    max-width: 460px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    z-index: 110;
+    animation: fadeInWarning 0.25s ease-out;
+}
+@keyframes fadeInWarning {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* THANH DOCK 4 NHÓM HÀNH ĐỘNG (TRANG 6) */
+.c3d-action-dock-4groups {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    background: rgba(30, 8, 12, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.15);
+    padding: 12px 16px;
+    border-radius: 16px 16px 0 0;
+    z-index: 50;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+}
+.c3d-action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.c3d-action-group .group-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #fca5a5;
+    margin-bottom: 2px;
+}
+.c3d-dock-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    width: 100%;
+}
+.c3d-dock-action-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+.c3d-dock-action-btn .btn-sub {
+    font-size: 10px;
+    font-weight: 400;
+    color: #cbd5e1;
+    margin-top: 2px;
+}
+.c3d-dock-action-btn .p-tag {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+.c3d-dock-action-btn .p-tag.p1 {
+    background: #0284c7;
+    color: #ffffff;
+}
+.c3d-dock-action-btn .p-tag.p2 {
+    background: #ea580c;
+    color: #ffffff;
+}
+.c3d-dock-action-btn .p-tag.p3 {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.c3d-keyboard-bar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(20, 5, 8, 0.9);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* BẢNG KẾT NỐI 3 BÊN MODAL */
+.c3d-connection-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+.c3d-connection-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    max-width: 620px;
+    width: 90%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* 5. PHẢN TƯ (BƯỚC 11 - TRANG 14) */
+.mp-end-reason-badge {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+}
+.mp-timeline-track {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    padding: 10px 0;
+}
+.mp-timeline-track::before {
+    content: '';
+    position: absolute;
+    top: 17px;
+    left: 10px;
+    right: 10px;
+    height: 3px;
+    background: #e2e8f0;
+    z-index: 1;
+}
+.mp-moment-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    cursor: pointer;
+}
+.mp-moment-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px #94a3b8;
+    transition: all 0.2s;
+}
+.mp-moment-node.selected .mp-moment-dot {
+    background: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.35);
+}
+.mp-moment-time {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    margin-top: 6px;
+}
+.mp-moment-label {
+    font-size: 11.5px;
+    color: #64748b;
+    text-align: center;
+    max-width: 80px;
+}
+.mp-step11-grid-2 {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+}
+.mp-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f8fafc;
+}
+.mp-checkbox-label input {
+    margin-top: 3px;
+}
+.mp-ev-desc {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* 6. NHẬN XÉT KHÔNG CHẤM ĐIỂM (TRANG 15) */
+.mp-subtabs-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+}
+.mp-subtab {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+}
+.mp-subtab.active {
+    background: #991b1b;
+    color: #ffffff;
+}
+.mp-notice-box-gold {
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    color: #854d0e;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mp-no-score-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+.mp-principle-col {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+}
+.mp-col-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.mp-col-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.mp-col-section .label-ok {
+    color: #15803d;
+    display: block;
+    margin-bottom: 2px;
+}
+.mp-col-section .label-adjust {
+    color: #c2410c;
+    display: block;
+    margin-bottom: 2px;
+}
+.mp-quote-box {
+    background: #f8fafc;
+    border-left: 3px solid #cbd5e1;
+    padding: 6px 10px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12.5px;
+    color: #1e293b;
+    font-style: italic;
+}
+.mp-col-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+.mp-law-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.mp-step12-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.mp-tension-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.tension-pill {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.tension-pill.red {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.tension-pill.orange {
+    background: #ffedd5;
+    color: #c2410c;
+}
+.tension-pill.yellow {
+    background: #fef9c3;
+    color: #854d0e;
+}
+.tension-pill.green {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* 7. NHẬN XÉT TỪNG HÀNH ĐỘNG (TRANG 16) */
+.mp-action-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.mp-action-item-card {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: #ffffff;
+}
+.mp-action-item-card.warn {
+    border-color: #fdba74;
+    background: #fffaf5;
+}
+.mp-action-item-card.ok {
+    border-color: #86efac;
+    background: #f6fef9;
+}
+
+/* 8. GIẢI PHÁP MẪU 3 BƯỚC (TRANG 17) */
+.mp-model-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+.mp-model-col {
+    display: flex;
+    flex-direction: column;
+    padding: 18px 16px;
+    position: relative;
+}
+.step-num-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #991b1b;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+.mp-step17-extra-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+}
+
+/* 9. HỒ SƠ TIẾN BỘ (TRANG 18) */
+.mp-step18-grid-2 {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 14px;
+}
+.mp-progress-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.mp-progress-table th {
+    text-align: left;
+    font-size: 11px;
+    color: #64748b;
+    padding: 8px 6px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.mp-progress-table td {
+    padding: 10px 6px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.mp-dot-filled {
+    font-size: 16px;
+}
+.mp-dot-filled.brown { color: #c2410c; }
+.mp-dot-filled.teal { color: #0284c7; }
+.mp-dot-filled.green { color: #166534; }
+.mp-dot-empty {
+    color: #cbd5e1;
+    font-size: 16px;
+}
+.mp-context-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.mp-ctx-chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #64748b;
+}
+.mp-ctx-chip.done {
+    background: #dcfce7;
+    color: #166534;
+    font-weight: 700;
+}
+.mp-step18-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 960px) {
+    .mp-category-grid-2,
+    .mp-step5-grid-3,
+    .mp-step11-grid-2,
+    .mp-no-score-grid-3,
+    .mp-action-cards-grid,
+    .mp-model-grid-3,
+    .mp-step17-extra-grid,
+    .mp-step18-grid-2,
+    .mp-step18-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+    .c3d-action-dock-4groups {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

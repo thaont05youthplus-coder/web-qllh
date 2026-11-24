@@ -26,6 +26,9 @@
         'thảo': 'student_female_1',
         quan: 'student_male_2',
         'quân': 'student_male_2',
+        minh: 'student_male_1',
+        me_khoa: 'student_female_2',
+        'mẹ khoa': 'student_female_2',
         ha: 'student_female_2',
         'hà': 'student_female_2'
     };

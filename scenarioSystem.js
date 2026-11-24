@@ -1,8 +1,9 @@
-// scenarioSystem.js - ULIS TeachLab: Hệ thống Mô phỏng Sư phạm 14 Bước (chuẩn Mockup + Luật Nhà giáo 73/2025/QH15)
+// scenarioSystem.js - ULIS TeachLab: Hệ thống Mô phỏng Sư phạm Bản 2
+// Hai loại tình huống nghiệp vụ (Giảng dạy & Chủ nhiệm), Ba nguyên tắc xử lý (P1, P2, P3), Nhận xét KHÔNG CHẤM ĐIỂM
 (function () {
     'use strict';
 
-    const PROGRESS_STORAGE_KEY = 'qllh_3d_group_progress_v1';
+    const PROGRESS_STORAGE_KEY = 'qllh_3d_group_progress_v2';
 
     function normalizeText(str) {
         return String(str || '')
@@ -39,10 +40,6 @@
             .replace(/'/g, '&#39;');
     }
 
-    function encodeArg(str) {
-        return encodeURIComponent(String(str || '')).replace(/'/g, '%27');
-    }
-
     function formatClock(totalSeconds) {
         const sec = Math.max(0, Math.floor(totalSeconds || 0));
         const m = String(Math.floor(sec / 60)).padStart(2, '0');
@@ -52,7 +49,7 @@
 
     function parseDurationSec(durationText) {
         const match = String(durationText || '').match(/(\d+)/);
-        return match ? parseInt(match[1], 10) * 60 : 360;
+        return match ? parseInt(match[1], 10) * 60 : 600;
     }
 
     function renderAvatarSvg(persona, sizePx) {
@@ -101,16 +98,21 @@
 
     const ScenarioSystem = {
         scenarios: [],
-        lawCriteria: {},
+        categories: {},
+        principles: {},
+        legalDocs: {},
         mbtiGroups: [],
         teacherPersonas: [],
         voiceModes: [],
         gradeLevels: [],
-        scenarioGroups: [],
-        difficulties: [],
         stepsMeta: [],
+        progressHistory: [],
 
-        // Trạng thái 14 bước
+        // Luồng 14 bước & 4 Giai đoạn
+        // 1: Thử micro | 2: Nhân vật GV | 3: Chọn tình huống (Mockup Trang 2)
+        // 5: Vào phòng mô phỏng (Trang 3/10) | 6: Khởi động | 7: Tình huống phát sinh (Trang 4/11)
+        // 8: Tạm dừng quan sát (Trang 5) | 9: Xử lý tình huống (Trang 6/11/12) | 10: Hết giờ/Kết thúc
+        // 11: Phản tư (Trang 14) | 12: Nhận xét tổng quan (Trang 15) | 13: Giải pháp mẫu (Trang 17) | 14: Hồ sơ tiến bộ (Trang 18)
         flowStep: 1,
         maxReachedStep: 1,
         wizardClosedForRoam: false,
@@ -119,7 +121,7 @@
         step1Verified: false,
         step1HeardText: '',
 
-        // Bước 2: Giới tính, nhân vật 16 MBTI & giọng giáo viên
+        // Bước 2: Nhân vật & giọng giáo viên
         selectedTeacherGender: 'female',
         selectedMbtiGroup: 'all',
         selectedTeacherId: 'intj_minh_thu',
@@ -127,64 +129,69 @@
         teacherNameEdited: false,
         selectedVoiceId: 'female_young',
 
-        // Bước 3: Cấp học & khối lớp
+        // Bước 3: Thiết lập tình huống (Trang 2)
+        selectedCategory: 'teaching', // 'teaching' | 'homeroom'
+        selectedActivityId: 'act_practice',
+        selectedScenarioId: 1,
+        selectedMode: 'guided', // 'guided' (Luyện tập) | 'realistic' (Thử thách)
         selectedGradeId: 'thcs',
         selectedGradeNumber: 7,
-
-        // Bước 4: Nhóm tình huống, chế độ & độ khó
-        selectedGroupId: 'group_participation',
-        selectedScenarioId: 2,
-        selectedMode: 'guided', // 'guided' (Luyện tập) | 'realistic' (Thử thách)
-        selectedDifficulty: 'easy', // 'easy' | 'medium' | 'hard'
-        showDirectPickerInStep4: false,
 
         // Trạng thái trong lớp học 3D (Bước 6–10)
         activeScenario: null,
         sessionElapsedSec: 0,
-        sessionDurationSec: 360,
+        sessionDurationSec: 600,
         isPaused: false,
-        silenceElapsedSec: 0,
         hintBannerText: '',
-        endReasonText: 'Bạn đã hoàn tất xử lý tình huống sư phạm.',
+        endReasonText: 'Mọi bạn đã có việc · Đã hẹn trao đổi với gia đình',
         warmupGreetingText: '',
+
+        // Trạng thái mức căng thẳng ẩn & tiến trình (Trang 4, 9, 11, 13, 15)
+        tensionLevel: 'Đang tăng', // 'Lớn' | 'Đang tăng' | 'Nhỏ' | 'Đã lắng'
+        tensionTimeline: [], // { time: '08:42', level: 'Đang tăng', note: '...' }
+
+        // Bảng kết nối 3 bên (Trang 12)
+        connectionModalOpen: false,
+        connectionTab: 'parents', // 'parents' | 'counseling' | 'chidoi'
+        connectionTargetChannel: 'private_msg', // 'private_msg' | 'group_reply' | 'phone' | 'meet'
+        connectionDraftText: '',
+        connectionSubmitted: false,
+        parentToastVisible: false,
+
+        // Nhắc nhở tức thời (Trang 8)
+        instantWarning: null, // { text, lawRefs, principle, canRetry }
+
+        // Bước 8: Tạm dừng để quan sát (Trang 5)
         step8Answer: '',
-        step8Eval: null,
+        step8PrinciplesSelected: ['P2', 'P1'],
+        step8HintLevel: 1,
+
+        // Dòng thời gian khoảnh khắc trong lớp học
         transcriptLog: [],
-        achievedCheckpoints: [],
-        hitNegativeBranches: [],
-        step3Resolved: false,
-        proximityToKhoa: null,
+        userMomentsTimeline: [], // { timeStr, actionTitle, role, text, isBad, principle, lawRef }
         studentParticipation: {},
         draftUtterance: '',
         showManualTextInput: false,
+        step3Resolved: false,
 
-        // Bước 11–14
-        selfEvalScore: 4,
-        selfEvalGoodText: '',
-        selfEvalChangeText: '',
-        selfEvalText: '',
-        finalLawReport: null,
+        // Phản tư & Nhận xét không chấm điểm (Trang 14–18)
+        selfEvalSelectedMoment: 0,
+        selfEvalPrinciples: { P1: true, P2: true, P3: true },
+        selfEvalEvidence: {
+            P2: 'Tạm dừng phân công, chuyển sang đặt tiêu chí chung',
+            P1: 'Nói riêng với Khoa, sau đó với Minh',
+            P3: 'Nhắn riêng, hẹn gọi điện cho mẹ Khoa'
+        },
+        selfEvalResolutionLevel: 'resolved_monitoring', // 'still_large' | 'reduced' | 'resolved_monitoring'
+        selfEvalRetryThought: 'Mình sẽ không nhắc Minh trước lớp mà tạm dừng phân công trước, nói riêng với Minh sau.',
+        reviewSubTab: 'overview', // 'overview' (Trang 15) | 'actions' (Trang 16) | 'model_solution' (Trang 17) | 'progress' (Trang 18)
         step13RetryText: '',
         step13RetrySuccess: false,
-        scenarioResults: {},
-        groupProgress: {},
 
         // Runtime controls
         _clockTimer: null,
         _spaceHolding: false,
         _sttTarget: 'main', // 'main' | 'step1' | 'step8' | 'step13'
-
-        get totalScore() {
-            return Object.values(this.scenarioResults).reduce((sum, item) => sum + (item.score || 0), 0);
-        },
-
-        get maxScore() {
-            return (this.scenarios.length || 5) * 100;
-        },
-
-        get completedCount() {
-            return Object.values(this.scenarioResults).filter(item => item.completed).length;
-        },
 
         get selectedTeacher() {
             const p = this.teacherPersonas.find(t =>
@@ -207,16 +214,16 @@
 
         init: function () {
             this.scenarios = Array.isArray(window.SCENARIOS_5) ? window.SCENARIOS_5 : [];
-            this.lawCriteria = window.LAW_2025_CRITERIA || {};
+            this.categories = window.SCENARIO_CATEGORIES || {};
+            this.principles = window.THREE_PRINCIPLES || {};
+            this.legalDocs = window.LEGAL_BASIS_DOCS || {};
             this.mbtiGroups = Array.isArray(window.MBTI_GROUPS) ? window.MBTI_GROUPS : [];
             this.teacherPersonas = Array.isArray(window.TEACHER_PERSONAS) ? window.TEACHER_PERSONAS : [];
             this.voiceModes = Array.isArray(window.TEACHER_VOICE_MODES) ? window.TEACHER_VOICE_MODES : [];
             this.gradeLevels = Array.isArray(window.GRADE_LEVELS) ? window.GRADE_LEVELS : [];
-            this.scenarioGroups = Array.isArray(window.SCENARIO_GROUPS) ? window.SCENARIO_GROUPS : [];
-            this.difficulties = Array.isArray(window.DIFFICULTY_LEVELS) ? window.DIFFICULTY_LEVELS : [];
             this.stepsMeta = Array.isArray(window.MOCKUP_14_STEPS) ? window.MOCKUP_14_STEPS : [];
+            this.progressHistory = Array.isArray(window.PROGRESS_HISTORY_SAMPLE) ? window.PROGRESS_HISTORY_SAMPLE : [];
 
-            this._loadGroupProgress();
             this.activeScenario = this.scenarios.find(s => s.id === this.selectedScenarioId) || this.scenarios[0] || null;
             this._bindSpeechEngineCallbacks();
             this._ensureContainers();
@@ -224,34 +231,6 @@
                 window.CharacterManager.setTeacherPersona(this.selectedTeacher);
             }
             this.goToFlowStep(1);
-        },
-
-        _loadGroupProgress: function () {
-            const defaults = {
-                group_org: 2,
-                group_participation: 3,
-                group_misbehavior: 1,
-                group_learning_support: 0,
-                group_emotion: 1
-            };
-            try {
-                if (typeof window.localStorage !== 'undefined') {
-                    const saved = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
-                    this.groupProgress = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
-                    return;
-                }
-            } catch (e) {}
-            this.groupProgress = defaults;
-        },
-
-        _saveGroupProgress: function (groupId) {
-            if (!groupId) return;
-            this.groupProgress[groupId] = (this.groupProgress[groupId] || 0) + 1;
-            try {
-                if (typeof window.localStorage !== 'undefined') {
-                    window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(this.groupProgress));
-                }
-            } catch (e) {}
         },
 
         _ensureContainers: function () {
@@ -270,1646 +249,832 @@
 
         _bindSpeechEngineCallbacks: function () {
             if (!window.SpeechEngine) return;
-
-            window.SpeechEngine.onSttResult = (finalText, interimText) => {
-                const combined = [finalText, interimText].filter(Boolean).join(' ').trim();
-                this.draftUtterance = combined;
-
+            window.SpeechEngine.onSttResult = (text, isFinal) => {
                 if (this._sttTarget === 'step1') {
-                    this.step1HeardText = combined;
-                    if (combined.length >= 4) {
+                    this.step1HeardText = text;
+                    if (isFinal && text.trim().length > 3) {
                         this.step1Verified = true;
                     }
-                    this.renderFlowWizard();
+                    this.renderAll();
+                    return;
+                }
+                if (this._sttTarget === 'step8') {
+                    this.step8Answer = text;
+                    const el = document.getElementById('mp-step8-input');
+                    if (el) el.value = text;
                     return;
                 }
                 if (this._sttTarget === 'step13') {
-                    this.step13RetryText = combined;
-                    // Không tự động đánh giá và nói chồng câu học sinh trên interim STT; chỉ đánh giá khi nhả mic / kết thúc nói
-                    this.renderFlowWizard();
+                    this.step13RetryText = text;
+                    if (isFinal) {
+                        this.step13RetrySuccess = true;
+                    }
+                    this.renderAll();
                     return;
                 }
-
-                const inputEl = this._getActiveSpeechInput();
-                if (inputEl) inputEl.value = combined;
-                const statusEl = document.getElementById('c3d-live-caption');
-                if (statusEl) {
-                    statusEl.textContent = interimText ? `Đang nghe: "${interimText}"` : combined;
-                }
-                const liveVoiceEl = document.getElementById('c3d-voice-live-text');
-                if (liveVoiceEl && combined) {
-                    liveVoiceEl.textContent = combined;
+                // STT chính trong lớp học
+                this.draftUtterance = text;
+                const liveEl = document.getElementById('c3d-voice-live-text');
+                if (liveEl) liveEl.textContent = text || 'Đang lắng nghe...';
+                if (isFinal && text.trim().length > 2) {
+                    this.submitTeacherUtterance(text);
                 }
             };
-
             window.SpeechEngine.onSttStateChange = (listening) => {
-                const btnMain = document.getElementById('c3d-mic-btn');
-                if (btnMain) {
-                    btnMain.classList.toggle('listening', listening);
-                    const iconEl = btnMain.querySelector('.c3d-mic-icon');
-                    const textEl = btnMain.querySelector('.c3d-mic-text');
-                    if (iconEl) iconEl.textContent = listening ? '⏹' : '🎙️';
-                    if (textEl) textEl.textContent = listening ? 'Dừng & Gửi' : 'Nói (Space)';
+                const micBtn = document.getElementById('c3d-mic-btn');
+                if (micBtn) {
+                    micBtn.classList.toggle('listening', listening);
                 }
-                const waveEl = document.querySelector('.c3d-voice-wave');
-                if (waveEl) waveEl.classList.toggle('active', listening);
-                const avatarWrap = document.querySelector('.c3d-teacher-avatar-wrapper');
-                if (avatarWrap) avatarWrap.classList.toggle('speaking', listening);
-                const statusEl = document.querySelector('.c3d-teacher-status');
-                if (statusEl) {
-                    statusEl.textContent = listening ? '🔴 Đang mấp máy nói...' : 'Giáo viên';
-                    statusEl.classList.toggle('speaking', listening);
-                }
-                const bubbleEl = document.querySelector('.c3d-voice-bubble-display');
-                if (bubbleEl) bubbleEl.classList.toggle('active', listening);
-
-                if (this.flowStep === 1 || this.flowStep === 13) {
-                    this.renderFlowWizard();
-                }
-            };
-
-            window.SpeechEngine.onSttError = (msg) => {
-                const statusEl = document.getElementById('c3d-live-caption');
-                if (statusEl) statusEl.textContent = msg;
-                if (window.showInteractionMessage) window.showInteractionMessage(`🎙️ ${msg}`);
+                this.renderInClassHud();
             };
         },
 
-        _getActiveSpeechInput: function () {
-            if (this.flowStep === 8) return document.getElementById('mp-step8-input');
-            return document.getElementById('c3d-speech-input');
-        },
+        // ================= ĐIỀU HƯỚNG BƯỚC (1–14) =================
+        goToFlowStep: function (step) {
+            this.flowStep = Math.max(1, Math.min(14, step));
+            this.maxReachedStep = Math.max(this.maxReachedStep, this.flowStep);
 
-        // ================= ĐIỀU HƯỚNG 14 BƯỚC =================
-        goToFlowStep: function (stepNum) {
-            const target = Math.max(1, Math.min(14, parseInt(stepNum, 10) || 1));
-            this.flowStep = target;
-            if (target > this.maxReachedStep) this.maxReachedStep = target;
-            this.wizardClosedForRoam = false;
-            this._sttTarget = target === 1 ? 'step1' : (target === 8 ? 'step8' : (target === 13 ? 'step13' : 'main'));
-
-            if (window.ClassroomGame && window.ClassroomGame.markEntered) {
-                window.ClassroomGame.markEntered();
-            }
-
-            // Đồng bộ chế độ HUD với lớp 3D
-            const isClass3D = target >= 6 && target <= 10;
+            // Xử lý camera Three.js theo bước
             if (window.ClassroomGame && window.ClassroomGame.setFlowPhase) {
-                window.ClassroomGame.setFlowPhase(isClass3D ? 'classroom3d' : 'wizard');
-            }
-
-            // Quản lý đồng hồ đếm thời gian lớp học
-            if (target === 6 || target === 7 || target === 9) {
-                this.isPaused = false;
-                if (window.ClassroomGame && window.ClassroomGame.setPaused) {
-                    window.ClassroomGame.setPaused(false);
+                if (this.flowStep <= 4) {
+                    window.ClassroomGame.setFlowPhase('setup');
+                } else if (this.flowStep === 5) {
+                    window.ClassroomGame.setFlowPhase('preview');
+                } else if (this.flowStep >= 6 && this.flowStep <= 10) {
+                    window.ClassroomGame.setFlowPhase('practice');
+                } else {
+                    window.ClassroomGame.setFlowPhase('feedback');
                 }
-                this._startClassTimer();
-            } else {
-                this._stopClassTimer();
-                if (target === 8 || target === 10) this.isPaused = true;
             }
 
-            if (target >= 6 && target <= 9 && !this.activeScenario) {
-                this.startScenario(this.selectedScenarioId, target);
-                return;
-            }
-
-            if (target === 6 && this.activeScenario) {
-                this._syncClassroom3D(this.activeScenario, true);
-                this.hintBannerText = 'Khởi động: Giáo viên giao nhiệm vụ mở đầu tiết học...';
-                // Tự động phát câu mở đầu của giáo viên, không bắt sinh viên phải nói ngay lượt 1
-                setTimeout(() => {
-                    if (this.flowStep === 6) {
-                        this.speakWarmupGreeting();
-                    }
-                }, 350);
-            }
-
-            if (target === 7 && this.activeScenario) {
-                this._triggerStep7Incident();
-            }
-
-            if (target === 12 && !this.finalLawReport && this.activeScenario) {
-                this._computeFinalLawReport();
+            if (this.flowStep === 6) {
+                this._initInClassSession();
+            } else if (this.flowStep === 7) {
+                this._triggerIncident();
             }
 
             this.renderAll();
         },
 
-        _startClassTimer: function () {
-            if (this._clockTimer) return;
-            this._clockTimer = setInterval(() => {
-                if (this.isPaused || (this.flowStep !== 6 && this.flowStep !== 7 && this.flowStep !== 9)) return;
-                this.sessionElapsedSec += 1;
-
-                // Thử thách mode: im lặng quá N giây (mặc định 7s ở Khó, 9s ở Vừa, 7s ở Thử thách) tự kích hoạt leo thang
-                if (this.flowStep === 9 && this.selectedMode === 'realistic') {
-                    this.silenceElapsedSec += 1;
-                    const limit = this.selectedDifficulty === 'medium' ? 9 : 7;
-                    if (this.silenceElapsedSec >= limit) {
-                        this.silenceElapsedSec = 0;
-                        this._triggerChallengeEscalation();
-                    }
-                }
-
-                // Hết giờ tiết học -> sang Bước 10
-                if (this.sessionElapsedSec >= this.sessionDurationSec) {
-                    this.endReasonText = 'Đã hết thời lượng thực hành của tiết mô phỏng.';
-                    this.finishPracticePhase();
-                    return;
-                }
-
-                const timerEl = document.getElementById('c3d-timer-val');
-                if (timerEl) {
-                    timerEl.textContent = `${formatClock(this.sessionElapsedSec)} / ${formatClock(this.sessionDurationSec)}`;
-                }
-                const silenceEl = document.getElementById('c3d-silence-badge');
-                if (silenceEl && this.selectedMode === 'realistic' && this.flowStep === 9) {
-                    const limit = this.selectedDifficulty === 'medium' ? 9 : 7;
-                    const left = Math.max(0, limit - this.silenceElapsedSec);
-                    silenceEl.textContent = `⏳ Tự hành động sau ${left}s`;
-                }
-            }, 1000);
-            if (typeof this._clockTimer.unref === 'function') {
-                this._clockTimer.unref();
+        // ================= BƯỚC 1: THỬ MICRO =================
+        toggleMic: function (target = 'main') {
+            this._sttTarget = target;
+            if (!window.SpeechEngine) return;
+            if (window.SpeechEngine.isListening) {
+                window.SpeechEngine.stopListening();
+            } else {
+                window.SpeechEngine.startListening();
             }
         },
-
-        _stopClassTimer: function () {
-            if (this._clockTimer) {
-                clearInterval(this._clockTimer);
-                this._clockTimer = null;
-            }
-        },
-
-        _triggerChallengeEscalation: function () {
-            const sc = this.activeScenario;
-            if (!sc || !sc.students || sc.students.length === 0) return;
-            const st = sc.students[0];
-            const msg = `(Lớp mất kiên nhẫn vì bạn im lặng quá 7 giây) ${st.name}: "${st.initialLine}"`;
-            this.transcriptLog.push({
-                role: 'student',
-                studentId: st.id,
-                speaker: st.name,
-                text: msg,
-                timestampSec: this.sessionElapsedSec,
-                isBad: true
-            });
-            if (window.CharacterManager) {
-                window.CharacterManager.showSpeechBubble(st.id, st.initialLine, 4500, '#ef4444');
-            }
-            this.renderInClassHud();
-        },
-
-        // ================= HÀNH ĐỘNG CHUẨN BỊ (BƯỚC 1–5) =================
         skipStep1: function () {
+            this.step1Verified = true;
             this.goToFlowStep(2);
         },
-
         simulateStep1MicSuccess: function () {
-            this.step1HeardText = 'Chào cả lớp, chúng ta bắt đầu nhé!';
+            this.step1HeardText = 'Chào cả lớp, hôm nay chúng ta bắt đầu bài học nhé!';
             this.step1Verified = true;
-            if (window.SpeechEngine) {
-                window.SpeechEngine.speak('Chào cả lớp, chúng ta bắt đầu nhé!', { speaker: 'Thử giọng', forceLang: 'vi-VN', rate: 1.02 });
-            }
-            this.renderFlowWizard();
+            this.renderAll();
         },
 
+        // ================= BƯỚC 2: CHỌN GIÁO VIÊN =================
         selectTeacherGender: function (gender) {
-            const targetGender = gender === 'male' ? 'male' : 'female';
-            this.selectedTeacherGender = targetGender;
-            let pool = this.teacherPersonas.filter(t => (t.gender || t.hairStyle) === targetGender);
-            if (this.selectedMbtiGroup !== 'all') {
-                const byGroup = pool.filter(t => t.mbtiGroup === this.selectedMbtiGroup);
-                if (byGroup.length > 0) {
-                    pool = byGroup;
-                } else {
-                    this.selectedMbtiGroup = 'all';
-                }
+            this.selectedTeacherGender = gender;
+            const valid = this.teacherPersonas.filter(t => t.gender === gender);
+            if (valid.length > 0 && !valid.some(t => t.id === this.selectedTeacherId)) {
+                this.selectTeacherId(valid[0].id);
+            } else {
+                this.renderAll();
             }
-            const cur = this.selectedTeacher;
-            const stillInPool = pool.some(t => t.id === cur.id);
-            if (!stillInPool && pool.length > 0) {
-                const nextT = pool[0];
-                this.selectedTeacherId = nextT.id;
-                if (!this.teacherNameEdited) {
-                    this.teacherDisplayName = nextT.displayName || nextT.name;
-                }
-                if (nextT.defaultVoiceId && this.selectedVoiceId !== 'real_voice') {
-                    this.selectedVoiceId = nextT.defaultVoiceId;
-                }
-            } else if (this.selectedVoiceId !== 'real_voice') {
-                this.selectedVoiceId = targetGender === 'male' ? 'male_young' : 'female_young';
-            }
-            if (window.CharacterManager && window.CharacterManager.setTeacherPersona) {
-                window.CharacterManager.setTeacherPersona(this.selectedTeacher);
-            }
-            this.renderFlowWizard();
         },
-
-        selectMbtiGroup: function (groupId) {
-            this.selectedMbtiGroup = groupId || 'all';
-            const pool = this.teacherPersonas.filter(t =>
-                (t.gender || t.hairStyle) === this.selectedTeacherGender &&
-                (this.selectedMbtiGroup === 'all' || t.mbtiGroup === this.selectedMbtiGroup)
-            );
-            const stillInPool = pool.some(t => t.id === this.selectedTeacher.id);
-            if (!stillInPool && pool.length > 0) {
-                const nextT = pool[0];
-                this.selectedTeacherId = nextT.id;
+        selectTeacherId: function (id) {
+            this.selectedTeacherId = id;
+            const p = this.teacherPersonas.find(t => t.id === id);
+            if (p) {
                 if (!this.teacherNameEdited) {
-                    this.teacherDisplayName = nextT.displayName || nextT.name;
+                    this.teacherDisplayName = p.displayName || p.name;
                 }
-                if (nextT.defaultVoiceId && this.selectedVoiceId !== 'real_voice') {
-                    this.selectedVoiceId = nextT.defaultVoiceId;
+                if (p.defaultVoiceId) {
+                    this.selectedVoiceId = p.defaultVoiceId;
                 }
                 if (window.CharacterManager && window.CharacterManager.setTeacherPersona) {
                     window.CharacterManager.setTeacherPersona(this.selectedTeacher);
                 }
             }
-            this.renderFlowWizard();
+            this.renderAll();
         },
-
-        selectTeacher: function (teacherId) {
-            const found = this.teacherPersonas.find(t =>
-                t.id === teacherId || (t.aliasIds && t.aliasIds.includes(teacherId))
-            );
-            this.selectedTeacherId = found ? found.id : teacherId;
-            if (found) {
-                this.selectedTeacherGender = found.gender || (found.hairStyle === 'male' ? 'male' : 'female');
-                if (!this.teacherNameEdited) {
-                    this.teacherDisplayName = found.displayName || found.name;
-                }
-                if (this.selectedVoiceId !== 'real_voice') {
-                    this.selectedVoiceId = this.selectedTeacherGender === 'male' ? 'male_young' : 'female_young';
-                }
-            }
-            if (window.CharacterManager && window.CharacterManager.setTeacherPersona) {
-                window.CharacterManager.setTeacherPersona(this.selectedTeacher);
-            }
-            this.renderFlowWizard();
+        selectVoiceId: function (vId) {
+            this.selectedVoiceId = vId;
+            this.renderAll();
         },
-
-        setTeacherDisplayName: function (val) {
+        setTeacherDisplayName: function (name) {
+            this.teacherDisplayName = name.trim();
             this.teacherNameEdited = true;
-            this.teacherDisplayName = String(val || '').trim() || this.selectedTeacher.displayName || 'Teacher';
-            if (window.CharacterManager && window.CharacterManager.setTeacherPersona) {
-                window.CharacterManager.setTeacherPersona(this.selectedTeacher);
-            }
         },
-
-        selectTeacherVoice: function (voiceId) {
-            this.selectedVoiceId = voiceId;
+        previewTeacherVoice: function () {
+            if (!window.SpeechEngine) return;
             const t = this.selectedTeacher;
-            if (!t.muteTeacherTts && window.SpeechEngine) {
-                window.SpeechEngine.speak(`Chào cả lớp, tôi là ${t.displayName}. Hôm nay chúng ta cùng học thật vui nhé.`, {
-                    speaker: t.displayName,
-                    gender: t.hairStyle === 'male' ? 'male' : 'female',
-                    forceLang: 'vi-VN',
-                    pitch: t.voicePitch,
-                    rate: t.voiceRate
-                });
-            }
-            this.renderFlowWizard();
+            const sampleText = `Xin chào các em học sinh, thầy cô là ${t.displayName}. Chúng ta cùng bắt đầu buổi học nhé!`;
+            window.SpeechEngine.speak(sampleText, {
+                speaker: t.displayName,
+                gender: t.gender,
+                pitch: t.voicePitch,
+                rate: t.voiceRate
+            });
         },
 
-        selectGrade: function (gradeId) {
-            this.selectedGradeId = gradeId;
-            const g = this.gradeLevels.find(x => x.id === gradeId) || this.gradeLevels[0];
-            if (g) {
-                this.selectedGradeNumber = g.defaultGrade || g.grades[0];
-                if (g.defaultGroupId) {
-                    this.selectScenarioGroup(g.defaultGroupId, false);
-                }
-            }
-            this.renderFlowWizard();
-        },
-
-        selectGradeNumber: function (num) {
-            this.selectedGradeNumber = parseInt(num, 10) || 7;
-            // Ánh xạ sang kịch bản THCS 7 vs 8 hoặc THPT 10 vs 11
-            if (this.selectedGradeId === 'thcs') {
-                if (this.selectedGradeNumber >= 8) {
-                    this.selectScenarioGroup('group_emotion', false);
-                } else {
-                    this.selectScenarioGroup('group_participation', false);
-                }
-            } else if (this.selectedGradeId === 'thpt') {
-                if (this.selectedGradeNumber >= 11) {
-                    this.selectScenarioGroup('group_learning_support', false);
-                } else {
-                    this.selectScenarioGroup('group_misbehavior', false);
-                }
+        // ================= BƯỚC 3: THIẾT LẬP TÌNH HUỐNG (TRANG 2) =================
+        selectCategory: function (catId) {
+            this.selectedCategory = catId;
+            if (catId === 'teaching') {
+                this.selectedActivityId = 'act_practice';
+                this.selectedScenarioId = 1;
             } else {
-                this.selectScenarioGroup('group_org', false);
+                this.selectedActivityId = 'act_experience';
+                this.selectedScenarioId = 2;
             }
-            this.renderFlowWizard();
+            this.activeScenario = this.scenarios.find(s => s.id === this.selectedScenarioId) || this.scenarios[0];
+            this.renderAll();
         },
-
-        selectScenarioGroup: function (groupId, rerender = true) {
-            this.selectedGroupId = groupId;
-            const grp = this.scenarioGroups.find(g => g.id === groupId);
-            if (grp && grp.scenarioIds && grp.scenarioIds.length > 0) {
-                this.selectedScenarioId = grp.scenarioIds[0];
-                this.activeScenario = this.scenarios.find(s => s.id === this.selectedScenarioId) || this.scenarios[0];
+        selectActivity: function (actId) {
+            this.selectedActivityId = actId;
+            // Chọn kịch bản tương ứng nếu có
+            if (actId === 'act_practice') {
+                this.selectedScenarioId = 1;
+            } else if (actId === 'act_experience') {
+                this.selectedScenarioId = 2;
+            } else if (actId === 'act_knowledge') {
+                this.selectedScenarioId = 3;
+            } else if (actId === 'act_homeroom') {
+                this.selectedScenarioId = 4;
+            } else if (actId === 'act_apply') {
+                this.selectedScenarioId = 5;
             }
-            if (rerender) this.renderFlowWizard();
+            this.activeScenario = this.scenarios.find(s => s.id === this.selectedScenarioId) || this.scenarios[0];
+            this.renderAll();
         },
-
-        selectScenarioInSetup: function (scenarioId) {
-            const id = parseInt(scenarioId, 10);
-            this.selectedScenarioId = id;
-            this.activeScenario = this.scenarios.find(s => s.id === id) || this.scenarios[0] || null;
-            const matchingGroup = this.scenarioGroups.find(g => g.scenarioIds.includes(id));
-            if (matchingGroup) this.selectedGroupId = matchingGroup.id;
-            this.renderFlowWizard();
+        selectScenarioInSetup: function (scId) {
+            this.selectedScenarioId = scId;
+            this.activeScenario = this.scenarios.find(s => s.id === scId) || this.scenarios[0];
+            if (this.activeScenario) {
+                this.selectedCategory = this.activeScenario.category || 'teaching';
+                this.selectedActivityId = this.activeScenario.activityId || (this.selectedCategory === 'teaching' ? 'act_practice' : 'act_experience');
+            }
+            this.renderAll();
         },
-
         selectMode: function (mode) {
-            this.selectedMode = (mode === 'realistic') ? 'realistic' : 'guided';
-            this.renderFlowWizard();
+            this.selectedMode = mode;
+            this.renderAll();
+        },
+        selectGradeNumber: function (num) {
+            this.selectedGradeNumber = num;
+            this.renderAll();
         },
 
-        selectDifficulty: function (diff) {
-            this.selectedDifficulty = ['easy', 'medium', 'hard'].includes(diff) ? diff : 'easy';
-            this.renderFlowWizard();
-        },
-
-        toggleDirectPickerInStep4: function () {
-            this.showDirectPickerInStep4 = !this.showDirectPickerInStep4;
-            this.renderFlowWizard();
-        },
-
-        // Bước 5 -> Bước 6
+        // ================= BƯỚC 5 -> 6 -> 7: VÀO LỚP & KÍCH HOẠT =================
         startScenarioFromStep5: function () {
-            this.startScenario(this.selectedScenarioId, 6);
+            this.activeScenario = this.scenarios.find(s => s.id === this.selectedScenarioId) || this.scenarios[0];
+            this.goToFlowStep(6);
         },
 
-        startScenario: function (scenarioId, targetStep = 6) {
-            const sc = this.scenarios.find(s => s.id === scenarioId) || this.scenarios[0];
-            if (!sc) return;
-
-            this.selectedScenarioId = sc.id;
-            this.activeScenario = sc;
-            this.sessionElapsedSec = 0;
-            this.sessionDurationSec = parseDurationSec(sc.duration);
-            this.isPaused = false;
-            this.silenceElapsedSec = 0;
-            this.hintBannerText = '';
-            this.warmupGreetingText = '';
-            this.step8Answer = '';
-            this.step8Eval = null;
-            this.transcriptLog = [];
-            this.achievedCheckpoints = [];
-            this.hitNegativeBranches = [];
-            this.step3Resolved = false;
-            this.proximityToKhoa = null;
-            this.studentParticipation = {};
-            this.draftUtterance = '';
-            this.selfEvalScore = 4;
-            this.selfEvalGoodText = '';
-            this.selfEvalChangeText = '';
-            this.selfEvalText = '';
-            this.finalLawReport = null;
-            this.step13RetryText = '';
-            this.step13RetrySuccess = false;
-
-            if (window.SpeechEngine) window.SpeechEngine.stopSpeaking();
-            this._syncClassroom3D(sc, targetStep === 6);
-            this.goToFlowStep(targetStep);
-        },
-
-        _syncClassroom3D: function (sc, initialAttentive) {
-            if (!sc) return;
-            if (window.CharacterManager) {
-                window.CharacterManager.setTeacherPersona(this.selectedTeacher);
-                window.CharacterManager.loadScenarioStudents(sc.students, {
-                    grade: sc.grade,
-                    isFreeExplore: false,
-                    initialAttentive: initialAttentive
-                });
-            }
-            if (window.ClassroomGame) {
-                if (window.ClassroomGame.updateBoardForScenario) {
-                    window.ClassroomGame.updateBoardForScenario(sc.boardLesson);
-                }
-                if (window.ClassroomGame.focusPlayerOnClass) {
-                    window.ClassroomGame.focusPlayerOnClass();
-                }
-            }
-        },
-
-        // ================= TRONG LỚP HỌC 3D (BƯỚC 6–10) =================
-        speakWarmupGreeting: function (customText) {
+        _initInClassSession: function () {
             const sc = this.activeScenario;
             if (!sc) return;
-            const teacher = this.selectedTeacher;
-            const warmupFallback = (sc.blindContext && sc.blindContext.warmupPrompt) ||
-                `Chào cả lớp! Hôm nay chúng ta bắt đầu bài ${sc.blindContext ? sc.blindContext.unitName : sc.title} nhé.`;
-            const line = (customText && String(customText).trim()) ? String(customText).trim() : warmupFallback;
 
-            this.warmupGreetingText = line;
-            this.transcriptLog.push({
-                role: 'teacher',
-                speaker: teacher.displayName,
-                text: line,
-                timestampSec: this.sessionElapsedSec,
-                tag: 'Khởi động'
-            });
+            this.sessionElapsedSec = parseDurationSec(sc.phaseTimeStart || '08:40');
+            this.sessionDurationSec = parseDurationSec(sc.phaseTimeEnd || '15:00');
+            this.isPaused = false;
+            this.tensionLevel = 'Đang tăng';
+            this.tensionTimeline = [
+                { time: formatClock(this.sessionElapsedSec), level: 'Đang tăng', note: 'Bắt đầu hoạt động' }
+            ];
+            this.instantWarning = null;
+            this.parentToastVisible = false;
+            this.connectionModalOpen = false;
+            this.connectionSubmitted = false;
+            this.step3Resolved = false;
+            this.transcriptLog = [];
+            this.userMomentsTimeline = [];
+            this.studentParticipation = {};
 
-            if (window.CharacterManager) {
+            // Khởi tạo học sinh trong Three.js
+            if (window.CharacterManager && window.CharacterManager.loadScenarioStudents) {
+                window.CharacterManager.loadScenarioStudents(sc.students || []);
                 window.CharacterManager.setStudentsAttentive();
             }
 
-            if (window.SpeechEngine && !teacher.muteTeacherTts) {
-                window.SpeechEngine.speak(line, {
-                    speaker: teacher.displayName,
-                    gender: teacher.hairStyle === 'male' ? 'male' : 'female',
-                    forceLang: 'vi-VN',
-                    pitch: teacher.voicePitch,
-                    rate: teacher.voiceRate,
-                    onEnd: () => {
-                        if (this.flowStep === 6) {
-                            setTimeout(() => {
-                                if (this.flowStep === 6) this.goToFlowStep(7);
-                            }, 350);
-                        }
+            // Đồng hồ thời gian thực trong lớp
+            if (this._clockTimer) clearInterval(this._clockTimer);
+            this._clockTimer = setInterval(() => {
+                if (!this.isPaused && this.flowStep >= 6 && this.flowStep <= 9) {
+                    this.sessionElapsedSec += 1;
+                    const timerEl = document.getElementById('c3d-timer-val');
+                    if (timerEl) {
+                        timerEl.textContent = `${formatClock(this.sessionElapsedSec)} / ${formatClock(this.sessionDurationSec)}`;
                     }
-                });
-            } else {
-                this.goToFlowStep(7);
-            }
+                }
+            }, 1000);
+
+            // Mở đầu khởi động
+            const warmup = sc.warmupGreeting || 'Các cặp bắt đầu làm Phiếu số 3 nhé, 10 phút.';
+            this.transcriptLog.push({
+                role: 'teacher',
+                speaker: (this.selectedTeacher && this.selectedTeacher.displayName) || 'Bạn',
+                timestampSec: this.sessionElapsedSec,
+                text: warmup
+            });
         },
 
-        _triggerStep7Incident: function () {
+        _triggerIncident: function () {
             const sc = this.activeScenario;
             if (!sc) return;
-            this.sessionElapsedSec = Math.max(this.sessionElapsedSec, 65); // 01:05 theo mockup
-            this.hintBannerText = '';
 
-            if (window.CharacterManager && window.CharacterManager.triggerScenarioIncident) {
-                window.CharacterManager.triggerScenarioIncident(sc.students);
+            this.sessionElapsedSec = parseDurationSec(sc.incidentTime || '08:42');
+            this.tensionLevel = sc.incidentTension || 'Đang tăng';
+            this.tensionTimeline.push({
+                time: formatClock(this.sessionElapsedSec),
+                level: this.tensionLevel,
+                note: 'Tình huống phát sinh'
+            });
+
+            // Nếu kịch bản chủ nhiệm (Khoa), di chuyển Khoa ra bàn cuối
+            if (sc.id === 2 && window.CharacterManager && window.CharacterManager.moveStudentDesk) {
+                window.CharacterManager.moveStudentDesk('khoa', { row: 2, col: 0, seat: 0 });
+                this.parentToastVisible = true;
             }
 
-            // Ghi nhận đầy đủ phát biểu của các học sinh vào nhật ký hội thoại
-            const hasIncident = this.transcriptLog.some(l => l.tag === 'incident_start');
-            if (!hasIncident) {
-                sc.students.forEach((st, idx) => {
-                    this.transcriptLog.push({
-                        role: 'student',
-                        studentId: st.id,
-                        speaker: st.name,
-                        text: st.initialLine,
-                        pitch: st.voicePitch,
-                        rate: st.voiceRate,
-                        timestampSec: this.sessionElapsedSec + idx * 2,
-                        tag: 'incident_start'
-                    });
+            // Kích hoạt các câu thoại mở màn của học sinh
+            if (Array.isArray(sc.incidentDialogue)) {
+                let delay = 300;
+                sc.incidentDialogue.forEach((line, idx) => {
+                    setTimeout(() => {
+                        this.transcriptLog.push({
+                            role: 'student',
+                            speaker: line.speakerName,
+                            studentId: line.speakerId,
+                            timestampSec: this.sessionElapsedSec + (idx * 2),
+                            text: line.text
+                        });
+                        this.studentParticipation[line.speakerId] = true;
+
+                        if (window.CharacterManager) {
+                            window.CharacterManager.setStudentPosture(line.speakerId, line.posture || 'attentive', line.text);
+                            window.CharacterManager.showSpeechBubble(line.speakerId, line.text, 5500);
+                            if (line.statusTag) {
+                                window.CharacterManager.setStudentStatusTag(line.speakerId, line.statusTag);
+                            }
+                        }
+
+                        // Phát TTS ElevenLabs
+                        if (window.SpeechEngine && window.SpeechEngine.ttsEnabled) {
+                            window.SpeechEngine.speak(line.text, {
+                                speaker: line.speakerId,
+                                isStudent: true,
+                                gender: line.gender || 'male'
+                            });
+                        }
+                        this.renderInClassHud();
+                    }, delay);
+                    delay += 3200;
                 });
             }
 
-            if (window.SpeechEngine && window.CharacterManager) {
-                const queue = sc.students.map((st, idx) => ({
-                    text: st.initialLine,
-                    speaker: st.name,
-                    gender: st.gender || 'female',
-                    isStudent: true,
-                    forceLang: 'vi-VN',
-                    pitch: st.voicePitch || 1.0,
-                    rate: st.voiceRate || 1.0,
-                    onStart: () => {
-                        window.CharacterManager.showSpeechBubble(st.id, st.initialLine, 5500, st.color);
-                    },
-                    onEnd: () => {
-                        if (idx === sc.students.length - 1 && this.flowStep === 7) {
-                            this.hintBannerText = this.selectedMode === 'guided'
-                                ? 'Tình huống đã phát sinh! Bấm "Nhận diện tình huống" hoặc nói để xử lý'
-                                : 'Tình huống đã phát sinh! Bạn hãy nói hoặc xử lý ngay!';
-                            this.renderInClassHud();
-                        }
-                    }
-                }));
-                window.SpeechEngine.speakSequence(queue);
-            }
+            this.hintBannerText = sc.incidentBanner || 'Tình huống đã phát sinh! Hãy lựa chọn cách xử lý sư phạm.';
+            this.renderInClassHud();
         },
 
         replayCurrentIncident: function () {
             const sc = this.activeScenario;
-            if (!sc || !window.SpeechEngine) return;
-            window.SpeechEngine.stopSpeaking();
-            if (window.SpeechEngine.isListening) {
-                window.SpeechEngine.stopListening();
-            }
-
-            const t = this.selectedTeacher;
-            const teacherLine = (sc.blindContext && sc.blindContext.warmupPrompt) ||
-                this.warmupGreetingText ||
-                'Chào cả lớp! Chúng ta bắt đầu bài học nhé!';
-
-            const queue = [
-                {
-                    text: teacherLine,
-                    speaker: this.teacherDisplayName || t.displayName || t.name,
-                    gender: (t.gender || t.hairStyle) === 'male' ? 'male' : 'female',
-                    isStudent: false,
-                    forceLang: 'vi-VN',
-                    pitch: t.voicePitch || 1.0,
-                    rate: t.voiceRate || 1.0
-                },
-                ...sc.students.map(st => ({
-                    text: st.initialLine,
-                    speaker: st.name,
-                    gender: st.gender || 'female',
-                    isStudent: true,
-                    forceLang: 'vi-VN',
-                    pitch: st.voicePitch || 1.0,
-                    rate: st.voiceRate || 1.0,
-                    onStart: () => {
-                        if (window.CharacterManager) {
-                            window.CharacterManager.showSpeechBubble(st.id, st.initialLine, 5000, st.color);
-                        }
-                    }
-                }))
-            ];
-            window.SpeechEngine.speakSequence(queue);
-        },
-
-        advanceAfterStep7: function () {
-            if (this.selectedMode === 'realistic') {
-                // Chế độ Thử thách: không tạm dừng giữa giờ, xử lý ngay ở Bước 9 (Bước 8 hỏi ở cuối buổi)
-                this.goToFlowStep(9);
-            } else {
-                this.goToFlowStep(8);
-            }
-        },
-
-        submitStep8: function (rawText) {
-            const sc = this.activeScenario;
             if (!sc) return;
-            const inputEl = document.getElementById('mp-step8-input');
-            const val = rawText !== undefined ? String(rawText).trim() : (inputEl ? inputEl.value.trim() : '');
-            this.step8Answer = val || '(Bỏ qua nhận định)';
-
-            const hits = sc.step1.expectedKeywords.filter(kw => matchesKeyword(this.step8Answer, kw));
-            this.step8Eval = {
-                matchedCount: hits.length,
-                isAccurate: hits.length >= 2,
-                summary: hits.length >= 2
-                    ? 'Chính xác — Bạn nhận ra đúng gốc rễ hành vi và cảm xúc của các học sinh trong lớp.'
-                    : (hits.length === 1 ? 'Gần đúng — Bạn đã thấy dấu hiệu chính nhưng có thể mô tả đủ các em còn lại.' : 'Cần quan sát sâu hơn nguyên nhân đằng sau hành vi của từng học sinh.')
-            };
-            this.silenceElapsedSec = 0;
-
-            if (this.selectedMode === 'realistic' && this.transcriptLog.some(l => l.role === 'teacher' && l.tag !== 'Khởi động')) {
-                this.goToFlowStep(10);
-            } else {
-                this.goToFlowStep(9);
-            }
-        },
-
-        submitTeacherUtterance: function (rawText) {
-            const sc = this.activeScenario;
-            if (!sc) return false;
-
-            // Nếu đang ở Bước 6 thì xử lý như câu chào/dẫn nhập khởi động
-            if (this.flowStep === 6) {
-                this.speakWarmupGreeting(rawText);
-                return true;
-            }
-
-            const inputEl = document.getElementById('c3d-speech-input');
-            const text = (rawText !== undefined ? String(rawText) : (inputEl ? inputEl.value : '')).trim();
-            if (!text) return false;
-
-            if (inputEl) inputEl.value = '';
-            this.draftUtterance = '';
-            this.silenceElapsedSec = 0;
-            this.sessionElapsedSec = Math.max(this.sessionElapsedSec + 25, 70);
-
-            if (sc.id === 3 && window.CharacterManager && window.CharacterManager.getStudentWorldPosition && window.ClassroomGame && window.ClassroomGame.getDistanceToPoint) {
-                const khoaPos = window.CharacterManager.getStudentWorldPosition('khoa');
-                if (khoaPos) {
-                    const dist = window.ClassroomGame.getDistanceToPoint(khoaPos);
-                    this.proximityToKhoa = (this.proximityToKhoa === null) ? dist : Math.min(this.proximityToKhoa, dist);
-                }
-            }
-
-            const matchedCps = [];
-            sc.checkpoints.forEach(cp => {
-                if (cp.keywords.some(kw => matchesKeyword(text, kw))) {
-                    matchedCps.push(cp.id);
-                    if (!this.achievedCheckpoints.includes(cp.id)) {
-                        this.achievedCheckpoints.push(cp.id);
-                    }
-                }
-            });
-
-            let matchedNegBranch = null;
-            for (const b of sc.branches) {
-                if (!b.success && b.triggers && b.triggers.some(tr => matchesKeyword(text, tr))) {
-                    matchedNegBranch = b;
-                    if (!this.hitNegativeBranches.some(x => x.id === b.id)) {
-                        this.hitNegativeBranches.push(b);
-                    }
-                    break;
-                }
-            }
-
-            const isPositive = matchedCps.length > 0 && !matchedNegBranch;
-            const teacher = this.selectedTeacher;
-            this.transcriptLog.push({
-                role: 'teacher',
-                speaker: teacher.displayName,
-                text: text,
-                timestampSec: this.sessionElapsedSec,
-                isGood: isPositive,
-                isBad: Boolean(matchedNegBranch),
-                matchedCps: matchedCps
-            });
-
-            if (matchedNegBranch) {
-                this._applyAndSpeakReactions(sc, matchedNegBranch.reactions, false);
-                this.renderInClassHud();
-                return true;
-            }
-
-            const requiredCount = sc.id === 4 ? 2 : Math.max(2, sc.checkpoints.length - 1);
-            if (this.achievedCheckpoints.length >= requiredCount || this._looksLikeCompleteResponse(sc, text)) {
-                const posBranch = sc.branches.find(b => b.success);
-                if (posBranch) {
-                    this.step3Resolved = true;
-                    sc.students.forEach(st => { this.studentParticipation[st.id] = true; });
-                    this._applyAndSpeakReactions(sc, posBranch.reactions, true);
-                    this.hintBannerText = `✅ Tốt lắm! Cả ${sc.students.length} học sinh đã hợp tác. Bạn có thể bấm "Kết thúc" để xem phân tích.`;
-                    this.renderInClassHud();
-                    return true;
-                }
-            }
-
-            const partialReactions = this._buildPartialReactions(sc, matchedCps, text);
-            this._applyAndSpeakReactions(sc, partialReactions, matchedCps.length > 0);
-            this.renderInClassHud();
-            return true;
-        },
-
-        _looksLikeCompleteResponse: function (sc, text) {
-            return text.length > 75 && this.achievedCheckpoints.length >= 2;
-        },
-
-        // Sinh lời thoại học sinh chân thực, gắn liền với phản hồi của giáo viên (không nhai lại kịch bản cũ)
-        _generateContextualStudentResponse: function (sc, text, matchedCps) {
-            const lower = (text || '').toLowerCase();
-            const sid = sc.id;
-
-            // 1. Nhận diện học sinh được nhắc tên trực tiếp
-            let targetStudent = sc.students.find(st => matchesKeyword(lower, st.name.toLowerCase()));
-
-            // Nếu không gọi tên ai, chọn học sinh phù hợp với ngữ cảnh xử lý của giáo viên
-            if (!targetStudent) {
-                if (sid === 2) {
-                    if (lower.includes('nhường') || lower.includes('thư ký') || lower.includes('từ từ') || lower.includes('lắng nghe') || lower.includes('ghi chép')) {
-                        targetStudent = sc.students.find(s => s.id === 'huy');
-                    } else if (lower.includes('bình tĩnh') || lower.includes('suy nghĩ') || lower.includes('1 phút') || lower.includes('thời gian') || lower.includes('tự tin') || lower.includes('ngại')) {
-                        targetStudent = sc.students.find(s => s.id === 'lan') || sc.students.find(s => s.id === 'nam');
-                    } else if (lower.includes('nam') || lower.includes('chia sẻ')) {
-                        targetStudent = sc.students.find(s => s.id === 'nam');
-                    } else {
-                        targetStudent = sc.students.find(s => s.id === 'huy') || sc.students[0];
-                    }
-                } else if (sid === 1) {
-                    targetStudent = sc.students.find(s => s.id === 'bin') || sc.students[0];
-                } else if (sid === 3) {
-                    targetStudent = sc.students.find(s => s.id === 'khoa') || sc.students[0];
-                } else if (sid === 4) {
-                    targetStudent = (lower.includes('mở rộng') || lower.includes('thêm'))
-                        ? sc.students.find(s => s.id === 'mai')
-                        : (sc.students.find(s => s.id === 'tuan') || sc.students[0]);
-                } else if (sid === 5) {
-                    targetStudent = (lower.includes('trật tự') || lower.includes('nhại'))
-                        ? sc.students.find(s => s.id === 'quan')
-                        : (sc.students.find(s => s.id === 'thao') || sc.students[0]);
-                } else {
-                    targetStudent = sc.students[0];
-                }
-            }
-
-            let line = '';
-            let posture = 'happy_task';
-            let statusTag = 'hợp tác';
-
-            // Sinh câu phản hồi tương ứng theo kịch bản và câu nói của giáo viên
-            if (sid === 2) { // Lớp 7 - Lối sống lành mạnh (Huy, Lan, Nam)
-                if (targetStudent.id === 'huy') {
-                    if (lower.includes('nhường') || lower.includes('thư ký') || lower.includes('ghi chép') || lower.includes('nghe')) {
-                        line = 'Dạ vâng cô! Em xin phép làm thư ký ghi lại ý kiến của nhóm để nhường lượt cho Lan và Nam ạ!';
-                        posture = 'happy_task';
-                        statusTag = 'làm thư ký nhóm';
-                    } else if (lower.includes('khen') || lower.includes('tốt') || lower.includes('giỏi') || lower.includes('ok')) {
-                        line = 'Dạ em cảm ơn cô! Em xin phép hỗ trợ bạn Nam và bạn Lan cùng phát biểu với nhóm ạ!';
-                        posture = 'happy_task';
-                        statusTag = 'hỗ trợ nhóm';
-                    } else {
-                        line = 'Dạ thưa cô, nhóm em thống nhất là muốn khỏe mạnh thì cần kết hợp cả ăn nhiều rau xanh và rèn luyện thể thao ạ!';
-                        posture = 'speaking_pair';
-                        statusTag = 'phát biểu';
-                    }
-                } else if (targetStudent.id === 'lan') {
-                    line = 'Dạ... nhờ cô cho thêm thời gian suy nghĩ nên em đỡ ngại rồi ạ. Thói quen của em là uống đủ 2 lít nước mỗi ngày và đi bộ buổi sáng ạ!';
-                    posture = 'speaking_pair';
-                    statusTag = 'tự tin phát biểu';
-                } else { // nam
-                    line = 'Dạ em cảm ơn cô đã động viên! Em thường đi ngủ sớm trước 10 giờ để sáng mai đi học không bị mệt mỏi ạ!';
-                    posture = 'speaking_pair';
-                    statusTag = 'chia sẻ thói quen';
-                }
-            } else if (sid === 1) { // Lớp 4 (Bin, Na, Tí)
-                if (targetStudent.id === 'bin') {
-                    line = 'Dạ vâng cô! Em về bàn ngay ạ, em sẽ làm bạn bấm giờ 3 phút và cùng bạn Na hoàn thành bảng sở thích!';
-                    posture = 'happy_task';
-                    statusTag = 'bấm giờ cho nhóm';
-                } else {
-                    line = 'Dạ em cảm ơn cô! Nhóm chúng em đã thảo luận xong câu hỏi về sở thích đọc sách và vẽ tranh rồi ạ!';
-                    posture = 'speaking_pair';
-                    statusTag = 'trình bày';
-                }
-            } else if (sid === 3) { // Lớp 10 (Khoa)
-                line = 'Dạ em xin lỗi thầy/cô! Em cất điện thoại vào cặp ngay và tập trung ghi chép bài học ạ.';
-                posture = 'writing';
-                statusTag = 'cất máy, ghi bài';
-            } else if (sid === 4) { // Lớp 11 (Mai, Tuấn, Linh)
-                if (targetStudent.id === 'mai') {
-                    line = 'Dạ vâng cô, em sẽ viết thêm phần phản biện và mở rộng góc nhìn nghề nghiệp như cô hướng dẫn ạ!';
-                    posture = 'writing';
-                    statusTag = 'viết mở rộng';
-                } else {
-                    line = 'Dạ có câu hỏi gợi ý của cô em đã hiểu đề và viết xong câu mở đoạn rồi ạ!';
-                    posture = 'writing';
-                    statusTag = 'đang làm bài';
-                }
-            } else if (sid === 5) { // Lớp 8 (Thảo, Quân, Hà)
-                if (targetStudent.id === 'quan') {
-                    line = 'Dạ em xin lỗi cô và bạn Thảo! Từ giờ em sẽ trật tự và chú ý lắng nghe bạn đọc bài ạ.';
-                    posture = 'attentive';
-                    statusTag = 'chú ý lắng nghe';
-                } else {
-                    line = 'Dạ... em cảm ơn cô đã bảo vệ và động viên em. Em xin phép đọc tiếp đoạn văn: Trước mắt chúng tôi là cánh đồng lúa chín ngút ngát mênh mông...';
-                    posture = 'speaking_pair';
-                    statusTag = 'tự tin đọc tiếp';
-                }
-            } else {
-                line = 'Dạ thưa thầy/cô, chúng em đã nắm rõ hướng dẫn và đang tích cực hoàn thành bài học ạ!';
-                posture = 'speaking_pair';
-                statusTag = 'hợp tác';
-            }
-
-            return { targetStudent, line, posture, statusTag };
-        },
-
-        _buildPartialReactions: function (sc, matchedCps, text) {
-            const out = {};
-            const { targetStudent, line, posture, statusTag } = this._generateContextualStudentResponse(sc, text, matchedCps);
-
-            sc.students.forEach((st) => {
-                if (st.id === targetStudent.id) {
-                    this.studentParticipation[st.id] = true;
-                    out[st.id] = {
-                        posture: posture || 'speaking_pair',
-                        statusTag: statusTag || 'phát biểu',
-                        line: line
-                    };
-                } else {
-                    // Các em khác lắng nghe, chuyển tư thế hợp tác và TUYỆT ĐỐI không lặp lại kịch bản cũ
-                    const listenTag = st.id === 'huy' ? 'lắng nghe bạn' : 'đang theo dõi';
-                    out[st.id] = {
-                        posture: 'attentive',
-                        statusTag: listenTag,
-                        line: ''
-                    };
-                }
-            });
-            return out;
-        },
-
-        _applyAndSpeakReactions: function (sc, reactions, isPositive) {
-            let focalStudent = null;
-            sc.students.forEach((st, idx) => {
-                const react = reactions[st.id];
-                if (!react) return;
-
-                if (isPositive && react.posture !== 'pouting' && react.posture !== 'head_down') {
-                    this.studentParticipation[st.id] = true;
-                }
-
-                const statusTag = react.statusTag || (isPositive ? (st.id === 'huy' ? 'đang ghi chép' : 'hợp tác') : '');
-                if (window.CharacterManager) {
-                    window.CharacterManager.setStudentPosture(st.id, react.posture, react.line);
-                    if (window.CharacterManager.setStudentStatusTag) {
-                        window.CharacterManager.setStudentStatusTag(st.id, statusTag, isPositive ? '#10b981' : '#f59e0b');
-                    }
-                }
-
-                // Chọn học sinh có thoại phản hồi để nói và phóng mặt cận cảnh
-                if (react.line && react.line.length > 0) {
-                    if (!focalStudent) {
-                        focalStudent = { st, react };
-                    } else if (st.id === 'lan' || st.id === 'nam') {
-                        focalStudent = { st, react };
-                    }
-                }
-            });
-
-            if (focalStudent) {
-                const { st, react } = focalStudent;
-                this.transcriptLog.push({
-                    role: 'student',
-                    studentId: st.id,
-                    speaker: st.name,
-                    text: react.line,
-                    pitch: st.voicePitch,
-                    rate: st.voiceRate,
-                    timestampSec: this.sessionElapsedSec + 2
-                });
-
-                if (window.CharacterManager) {
-                    window.CharacterManager.showSpeechBubble(st.id, react.line, 5500, isPositive ? '#10b981' : '#f59e0b');
-                    if (window.CharacterManager.setStudentSpeaking) {
-                        window.CharacterManager.setStudentSpeaking(st.id, true, 4500);
-                    }
-                }
-
-                // Hiệu ứng Camera 3D: Phóng mặt học sinh lên cận cảnh khi nói
-                if (window.ClassroomGame && window.ClassroomGame.focusOnStudent) {
-                    window.ClassroomGame.focusOnStudent(st.id, 4500);
-                }
-
+            if (Array.isArray(sc.incidentDialogue) && sc.incidentDialogue.length > 0) {
+                const first = sc.incidentDialogue[0];
                 if (window.SpeechEngine) {
-                    window.SpeechEngine.speak(react.line, {
-                        speaker: st.name,
-                        gender: st.gender || 'female',
-                        isStudent: true,
-                        forceLang: 'vi-VN',
-                        pitch: st.voicePitch || 1.0,
-                        rate: st.voiceRate || 1.0
+                    window.SpeechEngine.speak(first.text, {
+                        speaker: first.speakerId,
+                        isStudent: true
                     });
                 }
             }
         },
 
-        triggerDemoBranch: function (branchId) {
+        togglePracticePause: function () {
+            this.isPaused = !this.isPaused;
+            if (window.ClassroomGame) {
+                window.ClassroomGame.isPaused = this.isPaused;
+            }
+            if (window.SpeechEngine && this.isPaused) {
+                window.SpeechEngine.stopSpeaking();
+            }
+            this.renderInClassHud();
+        },
+
+        advanceAfterStep7: function () {
+            if (this.selectedMode === 'realistic') {
+                this.goToFlowStep(9);
+            } else {
+                this.goToFlowStep(8);
+            }
+        },
+
+        // ================= BƯỚC 8: TẠM DỪNG ĐỂ QUAN SÁT (TRANG 5) =================
+        toggleStep8Principle: function (pId) {
+            const idx = this.step8PrinciplesSelected.indexOf(pId);
+            if (idx >= 0) {
+                this.step8PrinciplesSelected.splice(idx, 1);
+            } else {
+                this.step8PrinciplesSelected.push(pId);
+            }
+            this.renderAll();
+        },
+        cycleStep8Hint: function () {
+            this.step8HintLevel = this.step8HintLevel === 1 ? 2 : 1;
+            this.renderAll();
+        },
+        submitStep8: function (rawText) {
+            const sc = this.activeScenario;
+            const inputEl = document.getElementById('mp-step8-input');
+            const val = rawText !== undefined ? rawText : (inputEl ? inputEl.value : this.step8Answer);
+            this.step8Answer = val || (sc ? sc.step8ObservationText : '');
+            this.goToFlowStep(9);
+        },
+
+        // ================= BƯỚC 9: XỬ LÝ VỚI 4 NHÓM HÀNH ĐỘNG (TRANG 6, 7, 8, 11, 12) =================
+        executeAction: function (actionType, actionMeta = {}) {
             const sc = this.activeScenario;
             if (!sc) return;
-            const branch = sc.branches.find(b => b.id === branchId);
-            if (!branch) return;
 
-            if (branch.success) {
-                sc.checkpoints.forEach(cp => {
-                    if (!this.achievedCheckpoints.includes(cp.id)) this.achievedCheckpoints.push(cp.id);
+            const timeStr = formatClock(this.sessionElapsedSec);
+
+            if (actionType === 'speak_all') {
+                // Nói với cả lớp (P2)
+                const text = sc.id === 2
+                    ? 'Cả lớp dừng phân công một chút, mình cùng đặt tiêu chí trước nhé: mỗi bạn một việc, theo điểm mạnh.'
+                    : 'Cả lớp tiếp tục làm phiếu. Chuyện của cặp nào, cô sẽ trao đổi riêng với cặp đó.';
+                this.submitTeacherUtterance(text, {
+                    actionName: 'Lời nói với cả lớp',
+                    principle: 'P2',
+                    lawRef: 'Đ9 k2 điểm d · TT 30 Đ12 k1 e'
                 });
-                this.step3Resolved = true;
-                sc.students.forEach(st => { this.studentParticipation[st.id] = true; });
-            } else {
-                if (!this.hitNegativeBranches.some(x => x.id === branch.id)) {
-                    this.hitNegativeBranches.push(branch);
-                }
-            }
+            } else if (actionType === 'speak_private') {
+                // Nói riêng một em (P1·P2)
+                const text = sc.id === 2
+                    ? 'Cô muốn nghe em kể, em thích làm phần nào của gian hàng?'
+                    : 'Cô nghe Lan trước, rồi nghe Nam. Lan đã làm những câu nào? Nam, em kể cô nghe em dùng AI thế nào?';
+                this.submitTeacherUtterance(text, {
+                    actionName: 'Nói riêng từng em',
+                    principle: 'P1',
+                    lawRef: 'Đ9 k2 điểm e · TT 30 Đ12 k1 đ'
+                });
+            } else if (actionType === 'nonverbal_stop') {
+                // Nhìn / ra hiệu dừng (P2)
+                const logText = sc.id === 2 ? 'Nhìn và ra hiệu dừng với Minh · Mời cả lớp chú ý' : 'Ra hiệu dừng với Huy · Giao nhiệm vụ chuẩn bị báo cáo';
+                this.transcriptLog.push({
+                    role: 'action',
+                    speaker: 'Hành động',
+                    timestampSec: this.sessionElapsedSec,
+                    text: logText
+                });
+                this.userMomentsTimeline.push({
+                    timeStr: timeStr,
+                    actionTitle: 'Phi ngôn ngữ: Ra hiệu dừng',
+                    quote: logText,
+                    isBad: false,
+                    principle: 'P2',
+                    lawRef: 'Luật NG Đ9 k2 e'
+                });
+                this.tensionLevel = 'Đang giảm';
+                this.tensionTimeline.push({ time: timeStr, level: 'Đang giảm', note: 'Ra hiệu dừng hạ nhiệt' });
 
-            this.sessionElapsedSec += 25;
-            this.transcriptLog.push({
-                role: 'teacher',
-                speaker: this.selectedTeacher.displayName,
-                text: branch.sampleSpeech,
-                timestampSec: this.sessionElapsedSec,
-                isGood: branch.success,
-                isBad: !branch.success
-            });
-            this._applyAndSpeakReactions(sc, branch.reactions, branch.success);
-            this.renderInClassHud();
-        },
-
-        togglePracticePause: function () {
-            if (this.selectedMode === 'realistic') return;
-            this.isPaused = !this.isPaused;
-            if (this.isPaused) {
-                // 1. Dừng ngay toàn bộ phát âm thanh và giọng nói học sinh/giáo viên
-                if (window.SpeechEngine) {
-                    window.SpeechEngine.stopSpeaking();
-                    if (window.SpeechEngine.isListening) {
-                        window.SpeechEngine.stopListening();
+                if (window.CharacterManager) {
+                    if (sc.id === 1) {
+                        window.CharacterManager.setStudentPosture('huy', 'writing', 'Dạ, em chuẩn bị câu 1 ạ!');
+                        window.CharacterManager.setStudentStatusTag('huy', 'chuẩn bị báo cáo', '#10b981');
+                    } else {
+                        window.CharacterManager.setStudentPosture('minh', 'attentive', 'Vâng ạ.');
                     }
                 }
-                // 2. Dừng cử động khẩu hình và ẩn bong bóng thoại
-                if (window.CharacterManager) {
-                    if (window.CharacterManager.stopAllSpeaking) window.CharacterManager.stopAllSpeaking();
-                    if (window.CharacterManager.hideAllSpeechBubbles) window.CharacterManager.hideAllSpeechBubbles();
-                }
-                // 3. Đóng băng Three.js (quạt trần, đồng hồ, vật lý nhân vật)
-                if (window.ClassroomGame && window.ClassroomGame.setPaused) {
-                    window.ClassroomGame.setPaused(true);
-                }
-            } else {
-                // Bật lại hoạt họa Three.js khi tiếp tục
-                if (window.ClassroomGame && window.ClassroomGame.setPaused) {
-                    window.ClassroomGame.setPaused(false);
-                }
+                this.renderInClassHud();
+            } else if (actionType === 'nonverbal_sit') {
+                // Mời ngồi xuống (P2)
+                this.transcriptLog.push({
+                    role: 'action',
+                    speaker: 'Hành động',
+                    timestampSec: this.sessionElapsedSec,
+                    text: 'Mời học sinh ngồi xuống bình tĩnh trao đổi'
+                });
+                this.tensionLevel = 'Đang giảm';
+                this.renderInClassHud();
+            } else if (actionType === 'nonverbal_wait') {
+                // Im lặng chờ (P2)
+                this.transcriptLog.push({
+                    role: 'action',
+                    speaker: 'Hành động',
+                    timestampSec: this.sessionElapsedSec,
+                    text: 'Giáo viên im lặng chờ cả lớp trật tự'
+                });
+                this.renderInClassHud();
+            } else if (actionType === 'org_pause') {
+                // Tạm dừng hoạt động 2 phút (P2)
+                const promptText = sc.id === 2
+                    ? 'Cả lớp dừng phân công một chút, mình cùng đặt tiêu chí trước nhé.'
+                    : 'Cả lớp tạm dừng làm phiếu 2 phút, ngồi nghe cô phổ biến quy tắc dùng AI.';
+                this.submitTeacherUtterance(promptText, {
+                    actionName: 'Tạm dừng hoạt động + Lời nói',
+                    principle: 'P2',
+                    lawRef: 'NQ 29 · TT 30 Đ12 k1 e'
+                });
+            } else if (actionType === 'org_split') {
+                // Chia lại nhóm / tách cặp (P1)
+                this.transcriptLog.push({
+                    role: 'action',
+                    speaker: 'Hành động',
+                    timestampSec: this.sessionElapsedSec,
+                    text: 'Tạm tách cặp / Phân chia vai trò rõ ràng cho từng bạn'
+                });
+                this.tensionLevel = 'Đã lắng';
+                this.step3Resolved = true;
+                this.renderInClassHud();
+            } else if (actionType === 'org_assign') {
+                // Giao nhiệm vụ (P2)
+                const text = sc.id === 2 ? 'Khoa, em có muốn giúp lớp vẽ biển hiệu gian hàng không? Cô thấy em vẽ rất đẹp.' : 'Huy, em chuẩn bị báo cáo câu 1 cho cả lớp giúp cô nhé.';
+                this.submitTeacherUtterance(text, {
+                    actionName: 'Giao nhiệm vụ cụ thể',
+                    principle: 'P2',
+                    lawRef: 'TT 30 Đ12 k1 điểm e'
+                });
+            } else if (actionType === 'org_rules') {
+                // Chỉ quy định về AI / Tiêu chí (P1)
+                const text = sc.id === 2 ? 'Quy ước chung của lớp mình: Mỗi bạn một việc, làm theo điểm mạnh, không ai bị bỏ lại!' : 'Quy định của lớp mình: Được dùng AI để tra cứu, nhưng phải tự viết câu trả lời và ghi chú rõ ràng.';
+                this.submitTeacherUtterance(text, {
+                    actionName: 'Đưa quy ước / tiêu chí lên bảng',
+                    principle: 'P1',
+                    lawRef: 'TT 02/2025 · QĐ 2422/2026'
+                });
+            } else if (actionType === 'conn_meet') {
+                // Hẹn gặp riêng sau giờ (P1)
+                this.transcriptLog.push({
+                    role: 'action',
+                    speaker: 'Hành động',
+                    timestampSec: this.sessionElapsedSec,
+                    text: 'Hẹn gặp riêng sau giờ để lắng nghe và hỗ trợ thêm'
+                });
+                this.step3Resolved = true;
+                this.tensionLevel = 'Đã lắng';
+                this.renderInClassHud();
+            } else if (actionType === 'conn_parents') {
+                // Mở Bảng kết nối Nhà trường – Gia đình – Xã hội (P3)
+                this.openConnectionModal('parents');
+            } else if (actionType === 'conn_report') {
+                // Báo GVCN / Tổ tư vấn (P3)
+                this.openConnectionModal('counseling');
             }
+        },
+
+        submitTeacherUtterance: function (customText, meta = {}) {
+            const sc = this.activeScenario;
+            if (!sc) return;
+
+            const text = (customText || this.draftUtterance || '').trim();
+            if (!text) return;
+            this.draftUtterance = '';
+
+            const timeStr = formatClock(this.sessionElapsedSec);
+            const isBadBranch = /chép ai là gian lận|0 điểm|phạt|gọi phụ huynh để răn đe|lớp trưởng mà nói thế à|đứng lên xin lỗi ngay/i.test(text);
+
+            this.transcriptLog.push({
+                role: 'teacher',
+                speaker: (this.selectedTeacher && this.selectedTeacher.displayName) || 'Bạn',
+                timestampSec: this.sessionElapsedSec,
+                text: text,
+                isBad: isBadBranch
+            });
+
+            this.userMomentsTimeline.push({
+                timeStr: timeStr,
+                actionTitle: meta.actionName || 'Lời nói giáo viên',
+                quote: text,
+                isBad: isBadBranch,
+                principle: meta.principle || (isBadBranch ? 'P2' : 'P1'),
+                lawRef: meta.lawRef || (isBadBranch ? 'Luật NG Đ11 k2 điểm b · TT 22 Đ4 k2' : 'Luật NG Đ9 k2 d, e')
+            });
+
+            // Nếu người dùng chọn/nói vào Nhánh B (Chưa phù hợp)
+            if (isBadBranch) {
+                this.tensionLevel = 'Lớn';
+                this.tensionTimeline.push({ time: timeStr, level: 'Lớn', note: 'Phê bình gay gắt làm tăng nhiệt' });
+
+                // Phản ứng học sinh Nhánh B
+                setTimeout(() => {
+                    if (sc.id === 1) {
+                        const reply = 'Em không chép! Cô không tin em!';
+                        this.transcriptLog.push({ role: 'student', speaker: 'Nam', studentId: 'nam', timestampSec: this.sessionElapsedSec + 2, text: reply });
+                        if (window.CharacterManager) {
+                            window.CharacterManager.setStudentPosture('nam', 'disagreeing', reply);
+                            window.CharacterManager.showSpeechBubble('nam', reply, 5000);
+                        }
+                        if (window.SpeechEngine) window.SpeechEngine.speak(reply, { speaker: 'nam', isStudent: true, gender: 'male' });
+                    } else {
+                        const reply = 'Minh xấu hổ cúi mặt, cãi lại. Khoa càng bối rối!';
+                        this.transcriptLog.push({ role: 'action', speaker: 'Diễn biến', timestampSec: this.sessionElapsedSec + 2, text: reply });
+                    }
+
+                    // Hiện thẻ nhắc nhở tức thời (Trang 8)
+                    if (this.selectedMode === 'guided') {
+                        this.instantWarning = {
+                            text: sc.id === 2
+                                ? 'Phê bình lớp trưởng trước tập thể khiến Minh mất mặt và lớp chia phe rõ hơn; chuyện nhỏ có nguy cơ thành lớn. Nhà giáo cần tôn trọng người học và giữ ứng xử mực thước.'
+                                : 'Kết luận “gian lận” trước lớp khi chưa nghe hai phía làm mâu thuẫn lớn thêm. Điểm số phản ánh kết quả học tập, không dùng để phạt hành vi; gọi phụ huynh để răn đe khác với phối hợp cùng gia đình.',
+                            lawRefs: sc.id === 2 ? 'Luật NG · Đ9 k2 điểm d · TT 30 · Đ6 k4' : 'TT 22 · Đ4 k2 · Luật NG · Đ11 k2 điểm b',
+                            principle: 'P2'
+                        };
+                    }
+                    this.renderInClassHud();
+                }, 600);
+            } else {
+                // Nhánh A (Phù hợp)
+                this.tensionLevel = this.tensionLevel === 'Lớn' ? 'Đang giảm' : 'Đã lắng';
+                this.tensionTimeline.push({ time: timeStr, level: this.tensionLevel, note: 'Xử lý phù hợp' });
+                this.step3Resolved = true;
+
+                setTimeout(() => {
+                    if (sc.id === 1) {
+                        const lanReply = 'Em làm cả 4 câu, Nam chỉ chép câu 2, 3 thôi ạ.';
+                        const namReply = 'Câu 2 và 3 em hỏi AI, em ghi chú lại ạ.';
+                        this.transcriptLog.push({ role: 'student', speaker: 'Lan', studentId: 'lan', timestampSec: this.sessionElapsedSec + 2, text: lanReply });
+                        this.transcriptLog.push({ role: 'student', speaker: 'Nam', studentId: 'nam', timestampSec: this.sessionElapsedSec + 4, text: namReply });
+
+                        if (window.CharacterManager) {
+                            window.CharacterManager.setStudentPosture('lan', 'writing', lanReply);
+                            window.CharacterManager.setStudentStatusTag('lan', 'bình tĩnh', '#10b981');
+                            window.CharacterManager.setStudentPosture('nam', 'writing', namReply);
+                            window.CharacterManager.setStudentStatusTag('nam', 'tự làm bài', '#38bdf8');
+                            window.CharacterManager.showSpeechBubble('nam', namReply, 5000);
+                        }
+                        if (window.SpeechEngine) window.SpeechEngine.speak(namReply, { speaker: 'nam', isStudent: true, gender: 'male' });
+                    } else {
+                        const khoaReply = 'Em cảm ơn cô, em sẽ vẽ biển hiệu thật đẹp cho lớp ạ!';
+                        this.transcriptLog.push({ role: 'student', speaker: 'Khoa', studentId: 'khoa', timestampSec: this.sessionElapsedSec + 2, text: khoaReply });
+                        if (window.CharacterManager) {
+                            window.CharacterManager.setStudentPosture('khoa', 'writing', khoaReply);
+                            window.CharacterManager.setStudentStatusTag('khoa', 'nhận vẽ biển', '#10b981');
+                            window.CharacterManager.showSpeechBubble('khoa', khoaReply, 5000);
+                        }
+                        if (window.SpeechEngine) window.SpeechEngine.speak(khoaReply, { speaker: 'khoa', isStudent: true, gender: 'male' });
+                    }
+                    this.renderInClassHud();
+                }, 600);
+            }
+
             this.renderInClassHud();
         },
 
-        requestHintInStep9: function () {
-            if (this.selectedMode === 'realistic' || !this.activeScenario) return;
-            const sc = this.activeScenario;
-            const nextCp = sc.checkpoints.find(cp => !this.achievedCheckpoints.includes(cp.id)) || sc.checkpoints[0];
-            this.hintBannerText = nextCp ? `💡 Gợi ý: ${nextCp.label}` : `💡 ${sc.lesson}`;
+        retryBranchB: function () {
+            this.instantWarning = null;
+            this.tensionLevel = 'Đang giảm';
+            this.executeAction('speak_all');
+        },
+
+        dismissInstantWarning: function () {
+            this.instantWarning = null;
+            this.renderInClassHud();
+        },
+
+        // ================= BẢNG KẾT NỐI NHÀ TRƯỜNG – GIA ĐÌNH – XÃ HỘI (TRANG 12) =================
+        openConnectionModal: function (tab = 'parents') {
+            this.connectionTab = tab;
+            this.connectionModalOpen = true;
+            this.connectionDraftText = 'Chào chị, em là GVCN lớp 8B. Cảm ơn chị đã báo cho em. Em đang trực tiếp nói chuyện với các con ở lớp. Tối nay khoảng 20h em gọi điện cho chị để nghe thêm về Khoa và cùng bàn cách giúp con, chị thấy có tiện không ạ?';
+            this.renderInClassHud();
+        },
+        closeConnectionModal: function () {
+            this.connectionModalOpen = false;
+            this.renderInClassHud();
+        },
+        switchConnectionTab: function (tab) {
+            this.connectionTab = tab;
+            this.renderInClassHud();
+        },
+        selectConnectionChannel: function (ch) {
+            this.connectionTargetChannel = ch;
+            this.renderInClassHud();
+        },
+        sendConnectionMessage: function () {
+            const timeStr = formatClock(this.sessionElapsedSec);
+            const draftEl = document.getElementById('c3d-conn-draft');
+            const content = draftEl ? draftEl.value : this.connectionDraftText;
+
+            this.transcriptLog.push({
+                role: 'action',
+                speaker: 'Bảng kết nối',
+                timestampSec: this.sessionElapsedSec,
+                text: `Gửi tin nhắn riêng đến phụ huynh Khoa: "${content}"`
+            });
+
+            this.userMomentsTimeline.push({
+                timeStr: timeStr,
+                actionTitle: 'Bảng kết nối · Nhắn riêng',
+                quote: content,
+                isBad: false,
+                principle: 'P3',
+                lawRef: 'TT 30 · Đ12 k1 điểm g · NQ 29 Nhà trường – Gia đình – Xã hội'
+            });
+
+            this.connectionModalOpen = false;
+            this.connectionSubmitted = true;
+            this.parentToastVisible = false;
+
+            // Phụ huynh phản hồi tích cực
+            setTimeout(() => {
+                const parentReply = 'Mẹ Khoa: Cảm ơn cô, tối nay 20h tôi đợi điện thoại của cô ạ.';
+                this.transcriptLog.push({
+                    role: 'action',
+                    speaker: 'Mẹ Khoa (Phụ huynh)',
+                    timestampSec: this.sessionElapsedSec + 2,
+                    text: parentReply
+                });
+                if (window.SpeechEngine) {
+                    window.SpeechEngine.speak('Cảm ơn cô, tối nay 20h tôi đợi điện thoại của cô ạ.', {
+                        speaker: 'me_khoa',
+                        isStudent: true,
+                        gender: 'female'
+                    });
+                }
+                this.tensionLevel = 'Đã lắng';
+                this.tensionTimeline.push({ time: timeStr, level: 'Đã lắng', note: 'Phụ huynh đồng ý phối hợp' });
+                this.renderInClassHud();
+            }, 800);
+
             this.renderInClassHud();
         },
 
         finishPracticePhase: function () {
+            if (this._clockTimer) clearInterval(this._clockTimer);
             if (window.SpeechEngine) window.SpeechEngine.stopSpeaking();
-            this._stopClassTimer();
-            const partCount = Object.keys(this.studentParticipation).length;
-            const totalSt = this.activeScenario ? this.activeScenario.students.length : 3;
-            if (this.step3Resolved || partCount >= totalSt) {
-                this.endReasonText = `Lý do kết thúc: cả ${totalSt} học sinh đã tham gia hoàn thành mục tiêu.`;
-            } else {
-                this.endReasonText = `Lý do kết thúc: hoàn tất lượt xử lý sau ${formatClock(this.sessionElapsedSec)}.`;
-            }
-
-            if (this.selectedMode === 'realistic' && !this.step8Answer) {
-                // Theo mockup Trang 8: Ở chế độ Thử thách, hỏi câu Nhận diện lúc cuối buổi
-                this.goToFlowStep(8);
-            } else {
-                this.goToFlowStep(10);
-            }
+            this.goToFlowStep(10);
         },
 
-        // ================= TỰ ĐÁNH GIÁ & PHÂN TÍCH (BƯỚC 11–14) =================
-        setSelfEvalScore: function (scoreVal) {
-            this.selfEvalScore = parseInt(scoreVal, 10) || 4;
-            this.renderFlowWizard();
+        // ================= BƯỚC 11: PHẢN TƯ (TRANG 14) =================
+        toggleSelfEvalPrinciple: function (pId) {
+            this.selfEvalPrinciples[pId] = !this.selfEvalPrinciples[pId];
+            this.renderAll();
         },
-
-        submitSelfEvaluation: function (rawText) {
-            const sc = this.activeScenario;
-            if (!sc) return;
-
-            if (rawText !== undefined) {
-                this.selfEvalText = String(rawText || '').trim();
-                this.selfEvalGoodText = this.selfEvalText;
-            } else {
-                const gEl = document.getElementById('mp-self-good');
-                const cEl = document.getElementById('mp-self-change');
-                if (gEl) this.selfEvalGoodText = gEl.value.trim();
-                if (cEl) this.selfEvalChangeText = cEl.value.trim();
-                this.selfEvalText = [this.selfEvalGoodText, this.selfEvalChangeText].filter(Boolean).join(' — ');
-            }
-            this._computeFinalLawReport();
+        setSelfEvalResolution: function (level) {
+            this.selfEvalResolutionLevel = level;
+            this.renderAll();
         },
-
-        finishToLawFeedback: function (skipSelfEval = false) {
-            if (skipSelfEval) {
-                this.selfEvalGoodText = '';
-                this.selfEvalChangeText = '';
-                this.selfEvalText = '';
-            } else {
-                this.submitSelfEvaluation();
-            }
-            this._computeFinalLawReport();
-            this._saveGroupProgress(this.selectedGroupId);
+        finishToNoScoreReport: function () {
+            const retryInput = document.getElementById('mp-self-retry-input');
+            if (retryInput) this.selfEvalRetryThought = retryInput.value;
+            this.reviewSubTab = 'overview';
             this.goToFlowStep(12);
         },
 
-        _computeFinalLawReport: function () {
-            const sc = this.activeScenario;
-            if (!sc) return null;
-
-            const report = this.generateLaw2025Report(sc);
-            this.finalLawReport = report;
-            const passedItems = report.items.filter(it => it.passed).length;
-            const lawRatio = report.items.length > 0 ? passedItems / report.items.length : 0;
-
-            const textLow = normalizeText(this.selfEvalText);
-            const hasSelfEvalDetail = textLow.length >= 16;
-            const hasFixIdea = ['lần sau', 'sửa', 'đổi', 'cần', 'sẽ', 'gọi', 'hỏi', 'giải thích', 'ghi nhận', 'tốt hơn', 'chậm', 'chỉ dẫn']
-                .some(kw => matchesKeyword(textLow, kw));
-            const selfEvalPassed = hasSelfEvalDetail && hasFixIdea;
-
-            let score = Math.round(lawRatio * 75);
-            if (this.step8Eval && this.step8Eval.isAccurate) score += 10;
-            if (selfEvalPassed) score += 15;
-            if (this.hitNegativeBranches.length > 0) score = Math.max(20, score - 12);
-            score = Math.min(100, Math.max(0, score));
-
-            const prev = this.scenarioResults[sc.id];
-            this.scenarioResults[sc.id] = {
-                completed: true,
-                score: prev ? Math.max(prev.score, score) : score,
-                lawReport: report,
-                selfEvalPassed: selfEvalPassed,
-                selfEvalScore: this.selfEvalScore,
-                selfEvalText: this.selfEvalText,
-                lastTranscript: [...this.transcriptLog]
-            };
-            return report;
+        switchReviewSubTab: function (tab) {
+            this.reviewSubTab = tab;
+            this.renderAll();
         },
 
-        generateLaw2025Report: function (sc) {
-            const teacherLines = this.transcriptLog.filter(l => l.role === 'teacher');
-            const hasSpeech = teacherLines.length > 0;
-            const hasNegBranch = this.hitNegativeBranches.length > 0;
-            const cpSet = new Set(this.achievedCheckpoints);
-
-            const pickQuoteWithTime = (keywords) => {
-                for (let i = teacherLines.length - 1; i >= 0; i--) {
-                    if (keywords.some(kw => matchesKeyword(teacherLines[i].text, kw))) {
-                        return {
-                            text: teacherLines[i].text,
-                            timeStr: formatClock(teacherLines[i].timestampSec || 70)
-                        };
-                    }
-                }
-                const last = teacherLines[teacherLines.length - 1];
-                return last
-                    ? { text: last.text, timeStr: formatClock(last.timestampSec || 70) }
-                    : { text: '(Chưa phát ngôn câu xử lý trực tiếp trên lớp)', timeStr: '00:00' };
-            };
-
-            const items = sc.lawCriteriaIds.map(cid => {
-                const criterion = this.lawCriteria[cid];
-                let passed = false;
-                let quote = '';
-                let timeStr = '01:10';
-                let reason = '';
-
-                if (!hasSpeech) {
-                    passed = false;
-                    quote = '(Chưa có lời nói xử lý trực tiếp của bạn trong buổi mô phỏng)';
-                    reason = `Chưa đạt — bạn chưa thực hiện lời nói điều phối để giải quyết tình huống theo chuẩn mực sư phạm.`;
-                } else {
-                    const pickWrap = (kws) => {
-                        const res = pickQuoteWithTime(kws);
-                        timeStr = res.timeStr;
-                        return res.text;
-                    };
-                    const evalResult = this._evaluateCriterionForScenario(sc.id, cid, cpSet, hasNegBranch, teacherLines, pickWrap);
-                    passed = evalResult.passed;
-                    quote = evalResult.quote;
-                    if (passed) {
-                        reason = criterion.passDesc;
-                    } else {
-                        reason = evalResult.gapDetail || criterion.failDesc;
-                    }
-                }
-                return { criterionId: cid, criterion, quote, timeStr, passed, reason };
-            });
-
-            return { scenarioId: sc.id, items, endConditionMet: this.step3Resolved };
-        },
-
-        _evaluateCriterionForScenario: function (scenarioId, cid, cpSet, hasNegBranch, teacherLines, pickQuote) {
-            const negIds = new Set(this.hitNegativeBranches.map(b => b.id));
-
-            if (scenarioId === 1) {
-                if (cid === 1) return { passed: cpSet.has('model_demo') || cpSet.has('check_icq') || this.step3Resolved, quote: pickQuote(['làm mẫu', 'sở thích', 'chỉ nói', 'hỏi đáp']), gapDetail: 'Hoạt động hỏi – đáp theo cặp chưa được hướng dẫn rõ quy trình để đạt mục tiêu tiết học.' };
-                if (cid === 6) return { passed: cpSet.has('stop_signal') && (cpSet.has('model_demo') || cpSet.has('check_icq')), quote: pickQuote(['một hai ba', '1 2 3', 'làm mẫu', 'nói hay viết', 'chỉ nói']), gapDetail: 'Cần dùng tín hiệu dừng kết hợp làm mẫu trực quan và câu hỏi kiểm tra hiểu (ICQs).' };
-                if (cid === 2) return { passed: !negIds.has('scold_bin') && (cpSet.has('assign_bin') || this.step3Resolved), quote: pickQuote(['bin', 'bấm giờ', 'nhóm trưởng', 'mắng', 'im đi']), gapDetail: 'Lời nói với Bin cần tôn trọng và trao cơ hội công bằng thay vì quát mắng.' };
-                if (cid === 5) return { passed: !negIds.has('scold_bin') && (cpSet.has('check_icq') || cpSet.has('model_demo') || this.step3Resolved), quote: pickQuote(['tí', 'hỏi bạn', 'không viết', 'sở thích', 'ngồi xuống ngay']), gapDetail: 'Cần giữ không khí an toàn để học sinh như Tí dám hỏi lại.' };
-            }
-            if (scenarioId === 2) {
-                if (cid === 2) return { passed: !negIds.has('silence_huy') && cpSet.has('ack_huy') && (cpSet.has('scaffold_nam') || cpSet.has('support_lan')), quote: pickQuote(['huy', 'lan', 'nam', 'nhường', 'thư ký', 'im đi']), gapDetail: 'Cần ghi nhận Huy trước khi xin lượt công bằng cho Lan và Nam.' };
-                if (cid === 3) return { passed: cpSet.has('scaffold_nam') || cpSet.has('ack_huy'), quote: pickQuote(['nam', 'thể thao', 'đá bóng', 'thư ký', 'huy']), gapDetail: 'Cần tạo giàn giáo vừa sức cho Nam và chuyển năng lượng của Huy sang vai trò hữu ích.' };
-                if (cid === 5) return { passed: !negIds.has('silence_huy') && !negIds.has('call_lan_suddenly') && (cpSet.has('think_time') || cpSet.has('support_lan')), quote: pickQuote(['30 giây', 'suy nghĩ', 'lan', 'trao đổi với bạn']), gapDetail: 'Gọi bất ngờ khi học sinh chưa kịp chuẩn bị làm giảm cảm giác an toàn tâm lý.' };
-                if (cid === 6) return { passed: cpSet.has('think_time') && (cpSet.has('scaffold_nam') || cpSet.has('support_lan')), quote: pickQuote(['30 giây', 'suy nghĩ', 'từng bước', 'trao đổi']), gapDetail: 'Cần áp dụng thời gian chờ suy nghĩ (Think time) trước khi gọi.' };
-            }
-            if (scenarioId === 3) {
-                if (cid === 7) return { passed: !negIds.has('public_yell') && cpSet.has('refer_rule'), quote: pickQuote(['nội quy', 'quy định', 'thống nhất', 'tịch thu']), gapDetail: 'Cần căn cứ đúng nội quy lớp đã thống nhất, tránh tự đặt hình thức xử lý trước lớp.' };
-                if (cid === 4) return { passed: !negIds.has('public_yell') && cpSet.has('private_calm'), quote: pickQuote(['cất điện thoại', 'cất máy', 'sau giờ', 'cuối tiết', 'dừng bài']), gapDetail: 'Cần giữ thái độ điềm tĩnh, ngôn ngữ mẫu mực để không căng thẳng hóa sự việc.' };
-                if (cid === 2) {
-                    const nearKhoa = this.proximityToKhoa !== null && this.proximityToKhoa <= 3.6;
-                    return { passed: !negIds.has('public_yell') && (cpSet.has('private_calm') || nearKhoa), quote: pickQuote(['khoa', 'cất điện thoại', 'nhắc riêng', 'tịch thu']), gapDetail: 'Cần đi lại gần nhắc nhỏ kín đáo để giữ thể diện cho học sinh.' };
-                }
-                if (cid === 1) return { passed: !negIds.has('ignore_phone') && !negIds.has('public_yell') && cpSet.has('redirect_duc'), quote: pickQuote(['đức', 'luận điểm', 'câu', 'bài nghe', 'ý chính']), gapDetail: 'Cần kéo Đức và lớp quay lại ngay nhiệm vụ bài nghe.' };
-            }
-            if (scenarioId === 4) {
-                if (cid === 3) return { passed: !negIds.has('mai_help_tuan') && cpSet.has('extend_mai') && cpSet.has('scaffold_tuan'), quote: pickQuote(['mai', 'tuấn', 'mở rộng', 'ví dụ', 'muốn trở thành', 'giúp tuấn']), gapDetail: 'Cần giao việc mở rộng cho Mai và khung gợi ý cho Tuấn thay vì chép hộ.' };
-                if (cid === 2) return { passed: !negIds.has('generic_encourage') && (cpSet.has('scaffold_tuan') || cpSet.has('check_linh')), quote: pickQuote(['tuấn', 'linh', 'cố lên']), gapDetail: 'Cần hỗ trợ công bằng cho cả học sinh bế tắc lẫn em làm nhầm đề.' };
-                if (cid === 1) return { passed: cpSet.has('check_linh'), quote: pickQuote(['linh', 'đọc lại đề', 'nghề của ai', 'câu hỏi']), gapDetail: 'Cần giúp Linh nhận ra trọng tâm đề bài để đạt mục tiêu bài viết.' };
-                if (cid === 6) return { passed: cpSet.has('scaffold_tuan') && cpSet.has('check_linh'), quote: pickQuote(['từng bước nhỏ', 'muốn trở thành', 'đọc lại đề', 'nghề của ai']), gapDetail: 'Cần đặt câu hỏi gợi mở và khung câu từng bước dựa trên khoa học giáo dục.' };
-            }
-            if (scenarioId === 5) {
-                if (cid === 5) return { passed: !negIds.has('ignore_laugh') && (cpSet.has('set_norm') || cpSet.has('support_thao')), quote: pickQuote(['dừng một chút', 'không cười', 'không cười nhạo', 'sai là bình thường', 'thảo', 'bạn khác']), gapDetail: 'Cần đặt chuẩn mực an toàn lớp học, bảo vệ em bị cười chê.' };
-                if (cid === 2) return { passed: !negIds.has('ignore_laugh') && !negIds.has('harsh_scold_quan') && (cpSet.has('support_thao') || cpSet.has('normalize_word')), quote: pickQuote(['thảo', 'cùng cô', 'cùng đọc', 'vô duyên', 'kiểm điểm']), gapDetail: 'Cần đối xử công bằng, tôn trọng với cả Thảo và Quân.' };
-                if (cid === 4) return { passed: !negIds.has('harsh_scold_quan') && !hasNegBranch && (cpSet.has('set_norm') || cpSet.has('redirect_quan') || this.step3Resolved), quote: pickQuote(['dừng một chút', 'không cười nhạo', 'vô duyên', 'quân im']), gapDetail: 'Cần mẫu mực, giữ bình tĩnh khi uốn nắn hành vi trêu đùa.' };
-                if (cid === 3) return { passed: cpSet.has('normalize_word') || cpSet.has('redirect_quan'), quote: pickQuote(['ngút ngát', 'cùng đọc', 'quân', 'giọng khỏe', 'đoạn sau']), gapDetail: 'Cần giúp cả lớp luyện chung từ khó và hướng năng lượng của Quân tích cực.' };
-            }
-
-            return {
-                passed: this.step3Resolved,
-                quote: teacherLines[0] ? teacherLines[0].text : '',
-                gapDetail: 'Cần thể hiện rõ hơn trong lời nói điều phối lớp.'
-            };
-        },
-
-        _evaluateStep13Retry: function (spokenText) {
-            const sc = this.activeScenario;
-            if (!sc || !spokenText) return;
-            const bad = sc.branches.some(b => !b.success && b.triggers && b.triggers.some(tr => matchesKeyword(spokenText, tr)));
-            const good = !bad && (spokenText.length >= 12 || sc.checkpoints.some(cp => cp.keywords.some(kw => matchesKeyword(spokenText, kw))));
-            this.step13RetrySuccess = good;
-            if (good && window.SpeechEngine) {
-                const st0 = sc.students && sc.students[0];
-                window.SpeechEngine.speak('Dạ vâng, em hiểu rồi ạ!', {
-                    speaker: st0 ? st0.name : 'Học sinh',
-                    gender: st0 ? (st0.gender || 'female') : 'female',
-                    isStudent: true,
-                    forceLang: 'vi-VN',
-                    pitch: 1.15
-                });
-            }
-        },
-
-        speakToneSample: function (idx) {
-            const sc = this.activeScenario;
-            if (!sc || !sc.step13Tones || !sc.step13Tones[idx] || !window.SpeechEngine) return;
-            
-            // Dừng micro ngay lập tức để không thu âm loa máy tính gây nói đè
-            if (window.SpeechEngine.isListening) {
-                window.SpeechEngine.stopListening();
-            }
-            window.SpeechEngine.stopSpeaking();
-
-            const t = this.selectedTeacher;
-            const toneObj = sc.step13Tones[idx];
-            window.SpeechEngine.speak(toneObj.text, {
-                speaker: this.teacherDisplayName || t.displayName || toneObj.tone,
-                gender: (t.gender || t.hairStyle) === 'male' ? 'male' : 'female',
-                forceLang: 'vi-VN',
-                pitch: t.voicePitch || 1.0,
-                rate: t.voiceRate || 1.0,
-                onEnd: () => {
-                    // Sau khi câu mẫu đọc xong hoàn toàn, học sinh mới phản hồi
-                    setTimeout(() => {
-                        if (this.flowStep === 13 && window.SpeechEngine) {
-                            const st0 = sc.students && sc.students[0];
-                            window.SpeechEngine.speak('Dạ vâng, em hiểu rồi ạ!', {
-                                speaker: st0 ? st0.name : 'Học sinh',
-                                gender: st0 ? (st0.gender || 'female') : 'female',
-                                isStudent: true,
-                                forceLang: 'vi-VN',
-                                pitch: 1.15
-                            });
-                        }
-                    }, 400);
-                }
-            });
-            // Điền nhanh vào câu thử lại nếu đang test không có mic
-            this.step13RetryText = toneObj.text;
-            this.step13RetrySuccess = true;
-            this.renderFlowWizard();
-        },
-
-        speakLawReport: function () {
-            const sc = this.activeScenario;
-            if (!sc || !window.SpeechEngine) return;
-            const report = this.finalLawReport || this.generateLaw2025Report(sc);
-            const parts = report.items.map((it, i) => `Mục ${i + 1}: ${it.criterion.shortRef}. ${it.reason}`);
-            window.SpeechEngine.speak(parts.join(' '), { speaker: 'Phân tích Luật 2025' });
-        },
-
-        rewindToDecisionPoint: function (indexInLog) {
-            const sc = this.activeScenario;
-            if (!sc) return;
-            if (window.SpeechEngine) window.SpeechEngine.stopSpeaking();
-
-            // Giữ lại diễn biến trước điểm quyết định được chọn (tối thiểu phần mở đầu tình huống)
-            const cutIdx = Math.max(0, Math.min(indexInLog, this.transcriptLog.length));
-            const leadSt = sc.students[0];
-            this.transcriptLog = cutIdx > 0
-                ? this.transcriptLog.slice(0, cutIdx)
-                : [{
-                    role: 'student',
-                    studentId: leadSt ? leadSt.id : 'st1',
-                    speaker: leadSt ? leadSt.name : 'Học sinh',
-                    text: leadSt ? leadSt.initialLine : sc.initialSceneText,
-                    timestampSec: 65,
-                    tag: 'incident_start'
-                }];
-
-            const lastEntry = this.transcriptLog[this.transcriptLog.length - 1];
-            this.sessionElapsedSec = (lastEntry && lastEntry.timestampSec) || 65;
-            this.achievedCheckpoints = [];
-            this.hitNegativeBranches = [];
-            this.step3Resolved = false;
-
-            if (window.CharacterManager && window.CharacterManager.triggerScenarioIncident) {
-                window.CharacterManager.triggerScenarioIncident(sc.students);
-            }
-            this.goToFlowStep(9);
-        },
-
-        rewindToStep9: function () {
-            this.rewindToDecisionPoint(0);
-        },
-
-        rewindToStep5: function () {
-            if (window.SpeechEngine) window.SpeechEngine.stopSpeaking();
-            this.goToFlowStep(5);
-        },
-
-        advanceToNextScenario: function () {
-            const curIdx = this.scenarios.findIndex(s => s.id === this.selectedScenarioId);
-            const nextSc = this.scenarios[(curIdx + 1) % this.scenarios.length];
-            if (nextSc) {
-                this.selectScenarioInSetup(nextSc.id);
-                this.goToFlowStep(5);
-            }
-        },
-
-        launchSuggestedGroup: function (groupId, scenarioId) {
-            this.selectScenarioGroup(groupId, false);
-            this.selectScenarioInSetup(scenarioId);
-            this.goToFlowStep(5);
-        },
-
-        useQuickPrompt: function (text) {
-            if (!text) return;
-            const inputEl = document.getElementById('c3d-speech-input');
-            if (inputEl) inputEl.value = text;
-            this.draftUtterance = text;
-            this.submitTeacherUtterance(text);
-        },
-
-        // ================= PUSH-TO-TALK (SPACE) & VOICE BRIDGE =================
-        handleSpaceDown: function (e) {
-            if (this._spaceHolding || (e && e.repeat)) return false;
-            if (this.wizardClosedForRoam) return false;
-            const supportedSteps = [1, 6, 7, 9, 13];
-            if (!supportedSteps.includes(this.flowStep)) return false;
-
-            this._spaceHolding = true;
-            this._sttTarget = this.flowStep === 1 ? 'step1' : (this.flowStep === 13 ? 'step13' : 'main');
-            if (window.SpeechEngine) {
-                if (window.SpeechEngine.stopSpeaking) window.SpeechEngine.stopSpeaking();
-                window.SpeechEngine.startListening('');
-            }
-            return true;
-        },
-
-        toggleManualTextInput: function () {
-            this.showManualTextInput = !this.showManualTextInput;
-            this.renderInClassHud();
-        },
-
-        handleSpaceUp: function () {
-            if (!this._spaceHolding) return false;
-            this._spaceHolding = false;
-            if (!window.SpeechEngine) return false;
-
-            window.SpeechEngine.flushAndStop((spokenText) => {
-                const phrase = spokenText || this.draftUtterance;
-                if (!phrase) return;
-                if (this.flowStep === 1) {
-                    this.step1HeardText = phrase;
-                    this.step1Verified = true;
-                    this.renderFlowWizard();
-                } else if (this.flowStep === 6) {
-                    this.speakWarmupGreeting(phrase);
-                } else if (this.flowStep === 7) {
-                    this.goToFlowStep(9);
-                    this.submitTeacherUtterance(phrase);
-                } else if (this.flowStep === 9) {
-                    this.submitTeacherUtterance(phrase);
-                } else if (this.flowStep === 13) {
-                    this.step13RetryText = phrase;
-                    this._evaluateStep13Retry(phrase);
-                    this.renderFlowWizard();
-                }
-            });
-            return true;
-        },
-
-        toggleMic: function (targetOverride) {
-            if (!window.SpeechEngine) return;
-            this._sttTarget = targetOverride || (this.flowStep === 1 ? 'step1' : (this.flowStep === 8 ? 'step8' : (this.flowStep === 13 ? 'step13' : 'main')));
-            const activeInput = this._getActiveSpeechInput();
-            const existing = (this._sttTarget === 'step8' && activeInput) ? activeInput.value : '';
-            if (window.SpeechEngine.isListening) {
-                window.SpeechEngine.flushAndStop((spokenText) => {
-                    const phrase = spokenText || this.draftUtterance;
-                    if (!phrase) return;
-                    if (this._sttTarget === 'step1') {
-                        this.step1HeardText = phrase;
-                        this.step1Verified = true;
-                        this.renderFlowWizard();
-                    } else if (this._sttTarget === 'step13') {
-                        this.step13RetryText = phrase;
-                        this._evaluateStep13Retry(phrase);
-                        this.renderFlowWizard();
-                    } else if (this.flowStep === 6 || this.flowStep === 9) {
-                        this.submitTeacherUtterance(phrase);
-                    }
-                });
-            } else {
-                if (window.SpeechEngine.stopSpeaking) window.SpeechEngine.stopSpeaking();
-                window.SpeechEngine.startListening(existing);
-            }
-        },
-
-        toggleSttLang: function () {
-            if (!window.SpeechEngine) return;
-            const nextLang = window.SpeechEngine.sttLang === 'en-US' ? 'vi-VN' : 'en-US';
-            window.SpeechEngine.setSttLang(nextLang);
-            this.renderInClassHud();
-        },
-
-        speakLine: function (text, speaker, pitch = 1.0, rate = 1.0) {
-            if (window.SpeechEngine) window.SpeechEngine.speak(text, { speaker, pitch, rate });
-        },
-
-        // ================= RENDER CHÍNH (MOCKUP 14 BƯỚC) =================
+        // ================= RENDERING =================
         renderAll: function () {
-            this.renderFlowWizard();
-            this.renderInClassHud();
-        },
-
-        renderFlowWizard: function () {
             const modal = document.getElementById('flow-modal');
             if (!modal) return;
 
-            const isWizardScreen = (this.flowStep >= 1 && this.flowStep <= 5) ||
-                this.flowStep === 8 ||
-                this.flowStep === 10 ||
-                (this.flowStep >= 11 && this.flowStep <= 14);
-
-            if (!isWizardScreen || this.wizardClosedForRoam) {
-                modal.classList.remove('show', 'dim-classroom');
+            // Nếu đang trong lớp học 3D (Bước 6, 7, 9) và không phải modal Step 8/10
+            if (this.flowStep === 6 || this.flowStep === 7 || this.flowStep === 9) {
+                modal.classList.add('hidden');
+                modal.innerHTML = '';
+                this.renderInClassHud();
                 return;
             }
 
-            modal.classList.add('show');
+            modal.classList.remove('hidden');
 
-            // Bước 8 & Bước 10: Modal trắng nổi giữa lớp học 3D làm mờ
-            if (this.flowStep === 8 || this.flowStep === 10) {
-                modal.classList.add('dim-classroom');
-                modal.innerHTML = `<div class="mp-center-modal-wrap">${
-                    this.flowStep === 8 ? this._renderStep8ModalHtml() : this._renderStep10ModalHtml()
-                }</div>`;
-                return;
-            }
+            let contentHtml = '';
+            if (this.flowStep === 1) contentHtml = this._renderStep1Page();
+            else if (this.flowStep === 2) contentHtml = this._renderStep2Page();
+            else if (this.flowStep === 3) contentHtml = this._renderStep3Page();
+            else if (this.flowStep === 5) contentHtml = this._renderStep5Page();
+            else if (this.flowStep === 8) contentHtml = this._renderStep8ModalHtml();
+            else if (this.flowStep === 10) contentHtml = this._renderStep10ModalHtml();
+            else if (this.flowStep === 11) contentHtml = this._renderStep11Page();
+            else if (this.flowStep === 12) {
+                if (this.reviewSubTab === 'actions') {
+                    contentHtml = this._renderActionReviewsPage();
+                } else if (this.reviewSubTab === 'model_solution') {
+                    contentHtml = this._renderStep13Page();
+                } else if (this.reviewSubTab === 'progress') {
+                    contentHtml = this._renderStep14Page();
+                } else {
+                    contentHtml = this._renderStep12Page();
+                }
+            } else if (this.flowStep === 13) contentHtml = this._renderStep13Page();
+            else if (this.flowStep === 14) contentHtml = this._renderStep14Page();
 
-            modal.classList.remove('dim-classroom');
-            const currentMeta = this.stepsMeta.find(s => s.step === this.flowStep) || { stage: 1 };
+            modal.innerHTML = `<div class="modal-card mp-flow-box">${contentHtml}</div>`;
+            this.renderInClassHud();
+        },
 
-            const stages = [
-                { id: 1, label: '1 · Chuẩn bị', jumpStep: 1 },
-                { id: 2, label: '2 · Trong lớp học', jumpStep: 6 },
-                { id: 3, label: '3 · Phản tư & phản hồi', jumpStep: 11 },
-                { id: 4, label: '4 · Luyện lại', jumpStep: 14 }
+        _renderTopStepperHeader: function (currentPhaseIndex, rightSubBadgeText) {
+            const phases = [
+                { idx: 1, label: '1 · Chuẩn bị' },
+                { idx: 2, label: '2 · Trong lớp học' },
+                { idx: 3, label: '3 · Phản tư & phản hồi' },
+                { idx: 4, label: '4 · Luyện lại' }
             ];
+            const pills = phases.map(p => `
+                <span class="mp-stepper-pill ${p.idx === currentPhaseIndex ? 'active' : ''}">${p.label}</span>
+            `).join('');
 
-            const stagePillsHtml = stages.map(st => {
-                const active = currentMeta.stage === st.id;
-                const enabled = st.jumpStep <= this.maxReachedStep || st.id === 1;
-                return `
-                    <button class="mp-stage-pill ${active ? 'active' : ''}"
-                        ${enabled ? `onclick="window.ScenarioSystem.goToFlowStep(${st.jumpStep})"` : 'disabled'}>
-                        ${st.label}
-                    </button>
-                `;
-            }).join('');
-
-            modal.innerHTML = `
-                <div class="mp-shell">
-                    <header class="mp-topbar">
-                        <div class="mp-brand">
-                            <span class="mp-brand-logo">TL</span>
-                            <span>ULIS TeachLab</span>
-                        </div>
-                        <nav class="mp-stage-stepper">${stagePillsHtml}</nav>
-                        <div class="mp-topbar-right" aria-hidden="true"></div>
-                    </header>
-                    <main class="mp-scroll">
-                        <div class="mp-container">
-                            ${this._renderLightPageBody()}
-                        </div>
-                    </main>
+            return `
+                <div class="mp-top-stepper-bar">
+                    <div class="mp-stepper-brand">
+                        <span class="mp-stepper-logo">TL</span>
+                        <strong>ULIS TeachLab</strong>
+                    </div>
+                    <div class="mp-stepper-pills">${pills}</div>
+                    <div class="mp-stepper-subbadge">${escapeHtml(rightSubBadgeText || '')}</div>
                 </div>
             `;
         },
 
-        _renderLightPageBody: function () {
-            switch (this.flowStep) {
-                case 1: return this._renderStep1Page();
-                case 2: return this._renderStep2Page();
-                case 3: return this._renderStep3Page();
-                case 4: return this._renderStep4Page();
-                case 5: return this._renderStep5Page();
-                case 11: return this._renderStep11Page();
-                case 12: return this._renderStep12Page();
-                case 13: return this._renderStep13Page();
-                case 14: return this._renderStep14Page();
-                default: return '';
-            }
-        },
-
+        // ================= TRANG BƯỚC 1: THỬ MICRO =================
         _renderStep1Page: function () {
             const listening = Boolean(window.SpeechEngine && window.SpeechEngine.isListening);
-            const statusHtml = this.step1Verified
-                ? `<div class="mp-status-pill-ok">✓ Đã nhận đúng: “${escapeHtml(this.step1HeardText || 'Chào cả lớp, chúng ta bắt đầu nhé!')}”</div>`
-                : `<div style="font-size:13px; color:#64748b;">Bấm vào micro (hoặc giữ phím <strong>Space</strong>) rồi đọc to câu trên</div>`;
-
             return `
-                <div class="mp-kicker">LẦN ĐẦU SỬ DỤNG</div>
-                <h1 class="mp-h1">Chào mừng bạn! Thử micro trước khi vào lớp</h1>
-                <p class="mp-subtitle">Mỗi buổi luyện kéo dài 5–7 phút. Bạn nói chuyện trực tiếp với học sinh AI trong lớp học, sau đó nhận phân tích và câu mẫu gợi ý.</p>
+                ${this._renderTopStepperHeader(1, 'Thử thiết bị')}
+                <div class="mp-kicker">GIAI ĐOẠN 1 · CHUẨN BỊ</div>
+                <h1 class="mp-h1">Kiểm tra micro của bạn</h1>
+                <p class="mp-subtitle">Để điều phối lớp học và giao tiếp tự nhiên với học sinh AI, hãy nói thử một câu ngắn vào micro.</p>
 
-                <div class="mp-step1-grid">
-                    <div class="mp-rule-list">
-                        <div class="mp-rule-item">
-                            <span class="mp-rule-num">1</span>
-                            <div>
-                                <div style="font-weight:700; font-size:15px; margin-bottom:4px;">Giữ phím Space hoặc nút micro để nói</div>
-                                <div style="font-size:13.5px; color:#475569; line-height:1.5;">Thả ra khi nói xong. Học sinh AI trả lời theo lượt, không nói chồng lên nhau.</div>
-                            </div>
-                        </div>
-                        <div class="mp-rule-item">
-                            <span class="mp-rule-num">2</span>
-                            <div>
-                                <div style="font-weight:700; font-size:15px; margin-bottom:4px;">Nói tiếng Việt tự nhiên qua micro</div>
-                                <div style="font-size:13.5px; color:#475569; line-height:1.5;">Giọng đọc người Việt rõ ràng giúp bạn dễ hình dung và xử lý tình huống như trên lớp thật.</div>
-                            </div>
-                        </div>
-                        <div class="mp-rule-item">
-                            <span class="mp-rule-num">3</span>
-                            <div>
-                                <div style="font-weight:700; font-size:15px; margin-bottom:4px;">Quan sát kỹ lớp học</div>
-                                <div style="font-size:13.5px; color:#475569; line-height:1.5;">Tình huống không được báo trước. Bạn tự nhận ra qua hành vi của học sinh.</div>
-                            </div>
-                        </div>
+                <div class="mp-card" style="text-align:center; padding:32px 20px;">
+                    <button class="mp-mic-circle ${listening ? 'listening' : ''}" onclick="window.ScenarioSystem.toggleMic('step1')">
+                        ${listening ? '⏹' : '🎙️'}
+                    </button>
+                    <div style="margin-top:14px; font-weight:700; color:#0f172a;">
+                        ${listening ? 'Đang lắng nghe... Hãy nói câu thử nghiệm' : 'Nhấn vào biểu tượng hoặc giữ phím Space để nói'}
                     </div>
-
-                    <div class="mp-card mp-mic-test-box">
-                        <div style="font-size:13px; color:#64748b; font-weight:600;">Đọc to câu sau</div>
-                        <div style="font-size:22px; font-weight:800; color:#0f172a;">“Chào cả lớp, chúng ta bắt đầu nhé!”</div>
-                        <button class="mp-mic-circle ${listening ? 'listening' : ''}" onclick="window.ScenarioSystem.toggleMic('step1')" title="Bấm hoặc giữ Space để nói">
-                            🎙️
-                        </button>
-                        <div class="mp-wave-bars ${listening || this.step1Verified ? 'active' : ''}">
-                            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                        </div>
-                        ${statusHtml}
-                        ${!this.step1Verified ? `
-                            <button class="mp-ghost-mini" onclick="window.ScenarioSystem.simulateStep1MicSuccess()">
-                                🔊 Nghe & giả lập kiểm tra không cần mic
-                            </button>
-                        ` : ''}
+                    <div class="mp-speech-heard-box">
+                        “${escapeHtml(this.step1HeardText || 'Ví dụ: Chào cả lớp, chúng ta bắt đầu nhé!')}”
+                    </div>
+                    <div style="margin-top:10px;">
+                        ${this.step1Verified
+                            ? '<span class="mp-badge-ok">✓ Đã nhận diện âm thanh tốt</span>'
+                            : '<button class="mp-ghost-mini" onclick="window.ScenarioSystem.simulateStep1MicSuccess()">Nhận diện mẫu (Bỏ qua thử)</button>'}
                     </div>
                 </div>
 
-                <div class="mp-footer" style="justify-content:flex-end;">
+                <div class="mp-footer">
+                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.skipStep1()">Bỏ qua micro</button>
                     <button class="mp-btn-primary" onclick="window.ScenarioSystem.goToFlowStep(2)">Tiếp tục</button>
                 </div>
             `;
         },
 
+        // ================= TRANG BƯỚC 2: CHỌN GIÁO VIÊN & GIỌNG NÓI =================
         _renderStep2Page: function () {
             const activeTeacher = this.selectedTeacher;
-            const currentGender = this.selectedTeacherGender === 'male' ? 'male' : 'female';
-            const genderPool = this.teacherPersonas.filter(p => (p.gender || p.hairStyle) === currentGender);
-            const filteredPersonas = this.selectedMbtiGroup === 'all'
-                ? genderPool
-                : genderPool.filter(p => p.mbtiGroup === this.selectedMbtiGroup);
-            const shownPersonas = filteredPersonas.length > 0 ? filteredPersonas : genderPool;
-
-            const femaleCount = this.teacherPersonas.filter(p => (p.gender || p.hairStyle) === 'female').length;
-            const maleCount = this.teacherPersonas.filter(p => (p.gender || p.hairStyle) === 'male').length;
-
-            const filterButtonsHtml = [
-                `<button class="mp-mbti-filter-btn ${this.selectedMbtiGroup === 'all' ? 'selected' : ''}" onclick="window.ScenarioSystem.selectMbtiGroup('all')">Tất cả (${genderPool.length})</button>`,
-                ...(this.mbtiGroups || []).map(g => {
-                    const count = genderPool.filter(p => p.mbtiGroup === g.id).length;
-                    const active = this.selectedMbtiGroup === g.id;
-                    return `
-                        <button class="mp-mbti-filter-btn ${active ? 'selected' : ''}"
-                                style="${active ? `background:${g.colorHex}; border-color:${g.colorHex}; color:#fff;` : ''}"
-                                onclick="window.ScenarioSystem.selectMbtiGroup('${g.id}')">
-                            <span class="mp-mbti-dot" style="background:${active ? '#ffffff' : g.colorHex};"></span>
-                            <span>${escapeHtml(g.label)} (${count})</span>
-                        </button>
-                    `;
-                })
-            ].join('');
-
-            const avatarCards = shownPersonas.map(p => {
-                const selected = activeTeacher.id === p.id;
-                const accent = p.colorHex || '#1d4ed8';
+            const validTeachers = this.teacherPersonas.filter(t => t.gender === this.selectedTeacherGender);
+            const teacherOptions = validTeachers.map(t => {
+                const selected = t.id === this.selectedTeacherId;
                 return `
-                    <div class="mp-card mp-card-selectable mp-avatar-card ${selected ? 'selected' : ''}"
-                         style="${selected ? `border-color:${accent}; box-shadow:0 0 0 1px ${accent}, 0 6px 16px rgba(15,23,42,0.08);` : ''}"
-                         onclick="window.ScenarioSystem.selectTeacher('${p.id}')">
-                        ${renderTeacherPortrait(p, 92)}
-                        <div style="display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap;">
-                            <span class="mp-mbti-badge" style="background:${accent};">${escapeHtml(p.mbti || '')}</span>
-                            <span style="font-size:11.5px; font-weight:600; color:#64748b;">${p.age ? `${p.age} tuổi` : ''}</span>
-                        </div>
-                        <div style="font-weight:800; font-size:15px; color:#0f172a;">${escapeHtml(p.name)}</div>
-                        <div class="mp-avatar-traits">${escapeHtml(p.traits || p.outfitDesc || '')}</div>
-                        <div style="font-size:12px; font-weight:700; margin-top:auto; color:${selected ? accent : '#64748b'};">
-                            ${selected ? '✓ Đang chọn' : 'Chọn nhân vật'}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            // Lọc giọng nói phù hợp với giới tính nhân vật giáo viên đang chọn (Giáo viên nữ -> chỉ hiện Giọng nữ & Giọng thật; Giáo viên nam -> chỉ hiện Giọng nam & Giọng thật)
-            const allowedVoiceModes = this.voiceModes.filter(v => {
-                if (v.id === 'real_voice' || v.gender === 'all') return true;
-                return (v.gender || (v.id.startsWith('male') ? 'male' : 'female')) === currentGender;
-            });
-
-            const voiceRadios = allowedVoiceModes.map(v => {
-                const selected = this.selectedVoiceId === v.id;
-                return `
-                    <div class="mp-radio-opt ${selected ? 'selected' : ''}" onclick="window.ScenarioSystem.selectTeacherVoice('${v.id}')">
-                        <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${selected ? '#1d4ed8' : '#94a3b8'}; display:inline-flex; align-items:center; justify-content:center;">
-                            ${selected ? '<span style="width:8px; height:8px; border-radius:50%; background:#1d4ed8;"></span>' : ''}
-                        </span>
-                        <span>${escapeHtml(v.label)}</span>
-                    </div>
-                `;
-            }).join('');
-
-            const detailColor = activeTeacher.colorHex || '#1d4ed8';
-
-            return `
-                <div class="mp-kicker">CHUẨN BỊ · NHÂN VẬT GIÁO VIÊN</div>
-                <h1 class="mp-h1">Chọn giới tính & nhân vật giáo viên</h1>
-                <p class="mp-subtitle" style="margin-bottom:10px;">Chọn giới tính giáo viên trước, sau đó chọn một trong 16 nhân vật theo phong cách MBTI (8 nữ, 8 nam).</p>
-                <div class="mp-mbti-disclaimer">
-                    <span>ℹ️</span>
-                    <span>MBTI chỉ dùng để tạo cá tính và hình ảnh nhân vật, không dùng để đánh giá người dùng.</span>
-                </div>
-
-                <div style="font-size:13px; font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
-                    1. Chọn giới tính giáo viên
-                </div>
-                <div class="mp-gender-bar">
-                    <button class="mp-gender-btn ${currentGender === 'female' ? 'selected' : ''}"
-                            onclick="window.ScenarioSystem.selectTeacherGender('female')">
-                        <span class="mp-gender-icon">👩‍🏫</span>
-                        <div>
-                            <div style="font-size:15px; font-weight:800; color:#0f172a;">Cô giáo (Nữ)</div>
-                            <div style="font-size:12.5px; color:#64748b;">${femaleCount} nhân vật MBTI · Giọng nữ</div>
-                        </div>
-                    </button>
-                    <button class="mp-gender-btn ${currentGender === 'male' ? 'selected' : ''}"
-                            onclick="window.ScenarioSystem.selectTeacherGender('male')">
-                        <span class="mp-gender-icon">👨‍🏫</span>
-                        <div>
-                            <div style="font-size:15px; font-weight:800; color:#0f172a;">Thầy giáo (Nam)</div>
-                            <div style="font-size:12.5px; color:#64748b;">${maleCount} nhân vật MBTI · Giọng nam</div>
-                        </div>
-                    </button>
-                </div>
-
-                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-                    <div style="font-size:13px; font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:0.5px;">
-                        2. Chọn nhân vật ${currentGender === 'female' ? 'Cô giáo' : 'Thầy giáo'} (${shownPersonas.length})
-                    </div>
-                </div>
-                <div class="mp-mbti-filters">${filterButtonsHtml}</div>
-
-                <div class="mp-step2-grid">
-                    <div class="mp-avatar-grid-4">${avatarCards}</div>
-
-                    <div class="mp-card" style="display:flex; flex-direction:column; gap:14px;">
-                        <div style="display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:1px solid #e2e8f0;">
-                            ${renderTeacherPortrait(activeTeacher, 76)}
-                            <div style="min-width:0;">
-                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
-                                    <span class="mp-mbti-badge" style="background:${detailColor};">${escapeHtml(activeTeacher.mbti || '')}</span>
-                                    <span style="font-size:11.5px; font-weight:700; color:#64748b;">${escapeHtml(activeTeacher.mbtiGroupLabel || '')}</span>
-                                </div>
-                                <div style="font-size:16px; font-weight:800; color:#0f172a;">${escapeHtml(activeTeacher.name)}${activeTeacher.age ? ` · ${activeTeacher.age} tuổi` : ''}</div>
+                    <div class="mp-card mp-card-selectable mp-teacher-card ${selected ? 'selected' : ''}"
+                         onclick="window.ScenarioSystem.selectTeacherId('${t.id}')">
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            ${renderTeacherPortrait(t, 54)}
+                            <div>
+                                <div style="font-weight:800; font-size:14px; color:#0f172a;">${escapeHtml(t.displayName || t.name)}</div>
+                                <div style="font-size:12px; color:#64748b;">${escapeHtml(t.mbti)} · ${escapeHtml(t.outfitDesc || '')}</div>
                             </div>
                         </div>
+                    </div>
+                `;
+            }).join('');
 
-                        <div style="font-size:12.5px; color:#334155; line-height:1.5; display:flex; flex-direction:column; gap:6px; background:#f8fafc; padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0;">
-                            <div><strong>Tính cách:</strong> ${escapeHtml(activeTeacher.traits || '')}</div>
-                            <div><strong>Ngoại hình:</strong> ${escapeHtml(activeTeacher.outfitDesc || '')}</div>
-                            <div><strong>Phong cách dạy:</strong> ${escapeHtml(activeTeacher.teachingStyle || '')}</div>
-                        </div>
+            return `
+                ${this._renderTopStepperHeader(1, 'Chọn nhân vật')}
+                <div class="mp-kicker">GIAI ĐOẠN 1 · CHUẨN BỊ</div>
+                <h1 class="mp-h1">Chọn hình tượng giáo viên của bạn</h1>
+                <p class="mp-subtitle">Hình ảnh và giọng nói của giáo viên được đồng bộ hóa với hệ thống lớp học 3D.</p>
 
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                    <button class="mp-pill ${this.selectedTeacherGender === 'female' ? 'selected' : ''}"
+                            onclick="window.ScenarioSystem.selectTeacherGender('female')">Cô giáo (Nữ)</button>
+                    <button class="mp-pill ${this.selectedTeacherGender === 'male' ? 'selected' : ''}"
+                            onclick="window.ScenarioSystem.selectTeacherGender('male')">Thầy giáo (Nam)</button>
+                </div>
+
+                <div class="mp-teacher-grid-3" style="max-height:280px; overflow-y:auto; padding-right:4px;">
+                    ${teacherOptions}
+                </div>
+
+                <div class="mp-card" style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:24px;">${this.selectedTeacherGender === 'female' ? '👩‍🏫' : '👨‍🏫'}</span>
                         <div>
-                            <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Tên hiển thị trong lớp</label>
-                            <input type="text" class="mp-input-light" value="${escapeHtml(this.teacherDisplayName)}"
-                                oninput="window.ScenarioSystem.setTeacherDisplayName(this.value)" placeholder="Ví dụ: ${escapeHtml(activeTeacher.name || 'Cô Minh Thư')}">
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">
-                            <div style="font-size:13px; font-weight:700; color:#334155;">Giọng nói của nhân vật</div>
-                            ${voiceRadios}
+                            <div style="font-weight:700; font-size:13.5px; color:#0f172a;">Giọng nói: ${escapeHtml(activeTeacher.displayName)}</div>
+                            <div style="font-size:12px; color:#64748b;">Giọng chuẩn người Việt truyền cảm qua ElevenLabs</div>
                         </div>
                     </div>
+                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.previewTeacherVoice()">▶ Nghe thử giọng</button>
                 </div>
 
                 <div class="mp-footer">
@@ -1919,568 +1084,1117 @@
             `;
         },
 
+        // ================= TRANG BƯỚC 3: CHỌN LOẠI TÌNH HUỐNG (MOCKUP TRANG 2) =================
         _renderStep3Page: function () {
-            const activeGradeObj = this.gradeLevels.find(g => g.id === this.selectedGradeId) || this.gradeLevels[0];
+            const isTeaching = this.selectedCategory === 'teaching';
 
-            const gradeCards = this.gradeLevels.map(g => {
-                const selected = this.selectedGradeId === g.id;
-                const bulletsHtml = (g.bullets || []).map(b => `<li>${escapeHtml(b)}</li>`).join('');
-                return `
-                    <div class="mp-card mp-card-selectable ${selected ? 'selected' : ''}"
-                         onclick="window.ScenarioSystem.selectGrade('${g.id}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <div class="mp-accent-bar" style="background:${g.accentHex}; margin-bottom:0;"></div>
-                            ${selected ? '<span style="font-size:12px; font-weight:700; color:#1d4ed8;">Đang chọn</span>' : ''}
-                        </div>
-                        <div style="font-size:18px; font-weight:800; color:#0f172a; margin-top:8px;">${escapeHtml(g.label)}</div>
-                        <div style="font-size:13px; color:#64748b; margin:2px 0 12px;">${escapeHtml(g.rangeLabel)}</div>
-                        <ul style="margin:0; padding-left:18px; color:#475569; font-size:13.5px; line-height:1.6;">
-                            ${bulletsHtml}
-                        </ul>
-                    </div>
-                `;
-            }).join('');
-
-            const numPills = (activeGradeObj.grades || []).map(n => `
-                <button class="mp-num-pill ${this.selectedGradeNumber === n ? 'selected' : ''}"
-                        onclick="window.ScenarioSystem.selectGradeNumber(${n})">${n}</button>
-            `).join('');
+            // Kịch bản mẫu 1 & 2
+            const scTeaching = this.scenarios.find(s => s.id === 1) || this.scenarios[0];
+            const scHomeroom = this.scenarios.find(s => s.id === 2) || this.scenarios[1];
 
             return `
-                <div class="mp-kicker">CHUẨN BỊ</div>
-                <h1 class="mp-h1">Bạn muốn dạy lớp nào?</h1>
-                <p class="mp-subtitle">Ngôn ngữ, hành vi và đặc điểm tâm lý của học sinh AI thay đổi theo từng lứa tuổi.</p>
-
-                <div class="mp-grade-grid-3">${gradeCards}</div>
-
-                <div class="mp-card mp-class-bar">
-                    <span style="font-size:14px; font-weight:700; color:#0f172a;">Khối lớp</span>
-                    <div style="display:flex; gap:8px;">${numPills}</div>
-                    <span style="font-size:13.5px; color:#475569;">Nội dung và diễn biến tâm lý bám sát lứa tuổi học sinh lớp ${this.selectedGradeNumber}.</span>
-                </div>
-
-                <div class="mp-footer">
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(2)">Quay lại</button>
-                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.goToFlowStep(4)">Tiếp tục</button>
-                </div>
-            `;
-        },
-
-        _renderStep4Page: function () {
-            const gradeObj = this.gradeLevels.find(g => g.id === this.selectedGradeId) || this.gradeLevels[0];
-
-            const groupCards = this.scenarioGroups.map(grp => {
-                const selected = this.selectedGroupId === grp.id;
-                return `
-                    <div class="mp-card mp-card-selectable mp-group-card ${selected ? 'selected' : ''}"
-                         onclick="window.ScenarioSystem.selectScenarioGroup('${grp.id}')">
-                        <div>
-                            <div class="mp-icon-tile">${grp.icon}</div>
-                            <div style="font-weight:800; font-size:14.5px; color:#0f172a; margin-top:12px;">${escapeHtml(grp.name)}</div>
-                            <div style="font-size:12.5px; color:#64748b; line-height:1.45; margin-top:6px;">${escapeHtml(grp.desc)}</div>
-                        </div>
-                        <div style="font-size:12.5px; font-weight:700; color:${selected ? '#1d4ed8' : '#64748b'};">
-                            ${selected ? '✓ Đang chọn' : 'Nhấn để chọn'}
-                        </div>
+                ${this._renderTopStepperHeader(1, 'Chọn tình huống')}
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:8px;">
+                    <div>
+                        <div class="mp-kicker">BƯỚC 3 · CHỌN LOẠI TÌNH HUỐNG</div>
+                        <h1 class="mp-h1" style="margin:2px 0 4px;">Hôm nay bạn muốn luyện tình huống nào?</h1>
                     </div>
-                `;
-            }).join('');
-
-            const modeCards = [
-                { id: 'guided', title: 'Luyện tập', desc: 'Được tạm dừng và nhận gợi ý xử lý sư phạm' },
-                { id: 'realistic', title: 'Thử thách', desc: 'Thời gian thực, tự xử lý nhanh với học sinh trong lớp' }
-            ].map(m => `
-                <div class="mp-card mp-card-selectable ${this.selectedMode === m.id ? 'selected' : ''}" style="padding:14px;"
-                     onclick="window.ScenarioSystem.selectMode('${m.id}')">
-                    <div style="font-weight:800; font-size:14.5px; color:#0f172a;">${m.title}</div>
-                    <div style="font-size:12.5px; color:#64748b; margin-top:4px; line-height:1.45;">${m.desc}</div>
-                </div>
-            `).join('');
-
-            const directPicker = this.showDirectPickerInStep4 ? `
-                <div class="mp-card" style="margin-top:14px; background:#eff6ff; border-color:#bfdbfe;">
-                    <div style="font-size:13px; font-weight:700; color:#1e40af; margin-bottom:8px;">Chọn trực tiếp 1 trong 5 kịch bản (dành cho giảng viên kiểm tra):</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                        ${this.scenarios.map(s => `
-                            <button class="mp-ghost-mini" style="${this.selectedScenarioId === s.id ? 'background:#1d4ed8;color:#fff;border-color:#1d4ed8;' : ''}"
-                                onclick="window.ScenarioSystem.selectScenarioInSetup(${s.id})">${escapeHtml(s.shortTitle)}</button>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : '';
-
-            return `
-                <div class="mp-kicker">CHUẨN BỊ · ${escapeHtml(gradeObj.shortTag)} LỚP ${this.selectedGradeNumber}</div>
-                <h1 class="mp-h1">Chọn nhóm tình huống muốn luyện</h1>
-                <p class="mp-subtitle">Hệ thống chọn ngẫu nhiên một kịch bản trong nhóm. Tên tình huống cụ thể sẽ được giữ kín.</p>
-
-                <div class="mp-group-grid-5">${groupCards}</div>
-
-                <div style="margin-top:20px;">
-                    <div class="mp-card">
-                        <div style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:10px;">Chế độ thực hành</div>
-                        <div class="mp-chip-grid-2">${modeCards}</div>
-                    </div>
-                </div>
-
-                ${directPicker}
-
-                <div class="mp-footer">
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(3)">Quay lại</button>
-                        <button class="mp-ghost-mini" onclick="window.ScenarioSystem.toggleDirectPickerInStep4()">
-                            ${this.showDirectPickerInStep4 ? 'Ẩn danh sách 5 kịch bản' : '🎯 Mở chọn trực tiếp 5 kịch bản'}
+                    <div class="mp-mode-toggle-group">
+                        <button class="mp-mode-btn ${this.selectedMode === 'guided' ? 'selected' : ''}"
+                                onclick="window.ScenarioSystem.selectMode('guided')">
+                            ⭕ Luyện tập
+                        </button>
+                        <button class="mp-mode-btn ${this.selectedMode === 'realistic' ? 'selected' : ''}"
+                                onclick="window.ScenarioSystem.selectMode('realistic')">
+                            🚩 Thử thách
                         </button>
                     </div>
-                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.goToFlowStep(5)">Bắt đầu</button>
+                </div>
+
+                <div class="mp-category-grid-2">
+                    <!-- CỘT TRÁI: NHÓM 1 · TÌNH HUỐNG GIẢNG DẠY -->
+                    <div class="mp-card mp-category-column ${isTeaching ? 'active' : ''}"
+                         onclick="window.ScenarioSystem.selectCategory('teaching')">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="mp-cat-icon">📖</span>
+                                <div>
+                                    <div style="font-weight:800; font-size:16px; color:#0f172a;">Tình huống giảng dạy</div>
+                                    <div style="font-size:12px; color:#64748b;">Phát sinh trong một giờ học, theo tiến trình 4 hoạt động</div>
+                                </div>
+                            </div>
+                            ${isTeaching ? '<span class="mp-badge-tag active">Đang chọn</span>' : ''}
+                        </div>
+
+                        <div class="mp-activities-flow">
+                            <div class="mp-act-box ${this.selectedActivityId === 'act_warmup' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_warmup')">
+                                <span class="mp-act-step">HOẠT ĐỘNG 1</span>
+                                <strong>Khởi động</strong>
+                                <p>Lớp chưa vào bài, học sinh mất tập trung, câu hỏi mở đầu không ai trả lời</p>
+                            </div>
+                            <div class="mp-act-box ${this.selectedActivityId === 'act_knowledge' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_knowledge')">
+                                <span class="mp-act-step">HOẠT ĐỘNG 2</span>
+                                <strong>Hình thành kiến thức</strong>
+                                <p>Học sinh hiểu sai, hỏi khó, tranh luận trái chiều</p>
+                            </div>
+                            <div class="mp-act-box highlighted ${this.selectedActivityId === 'act_practice' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_practice')">
+                                <span class="mp-act-step">HOẠT ĐỘNG 3</span>
+                                <strong>Luyện tập</strong>
+                                <p>Chép bài, dùng AI làm hộ, nhóm làm việc không đều</p>
+                            </div>
+                            <div class="mp-act-box ${this.selectedActivityId === 'act_apply' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_apply')">
+                                <span class="mp-act-step">HOẠT ĐỘNG 4</span>
+                                <strong>Vận dụng thực tế</strong>
+                                <p>Ý tưởng bị chê, sản phẩm thất bại, liên hệ nhạy cảm</p>
+                            </div>
+                        </div>
+
+                        <div style="font-size:11.5px; color:#64748b; margin:10px 0 6px;">
+                            Tiến trình theo Kế hoạch bài dạy của Công văn 5512: Mở đầu → Hình thành kiến thức mới → Luyện tập → Vận dụng.
+                        </div>
+
+                        <div class="mp-scenario-featured-card" onclick="event.stopPropagation(); window.ScenarioSystem.selectScenarioInSetup(1)">
+                            <div style="font-size:20px;">🤖</div>
+                            <div style="flex:1;">
+                                <div style="font-weight:800; font-size:14px; color:#0f172a;">Bài làm nhờ AI</div>
+                                <div style="font-size:12px; color:#475569;">Lớp 7 · KHTN · Hai bạn trong cặp tranh cãi vì một bạn dùng chatbot làm phiếu học tập</div>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <span class="mp-principle-badge p1">⚖️ P1</span>
+                                <span class="mp-principle-badge p2">↓ P2</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CỘT PHẢI: NHÓM 2 · TÌNH HUỐNG CHỦ NHIỆM LỚP -->
+                    <div class="mp-card mp-category-column ${!isTeaching ? 'active' : ''}"
+                         onclick="window.ScenarioSystem.selectCategory('homeroom')">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="mp-cat-icon">👥</span>
+                                <div>
+                                    <div style="font-weight:800; font-size:16px; color:#0f172a;">Tình huống chủ nhiệm lớp</div>
+                                    <div style="font-size:12px; color:#64748b;">Phát sinh khi tổ chức lớp, sinh hoạt tập thể</div>
+                                </div>
+                            </div>
+                            ${!isTeaching ? '<span class="mp-badge-tag active">Đang chọn</span>' : ''}
+                        </div>
+
+                        <div class="mp-activities-flow">
+                            <div class="mp-act-box ${this.selectedActivityId === 'act_homeroom' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_homeroom')">
+                                <span class="mp-act-step">BỐI CẢNH 1</span>
+                                <strong>Sinh hoạt lớp</strong>
+                                <p>Bầu cán bộ lớp, phê bình, nề nếp</p>
+                            </div>
+                            <div class="mp-act-box ${this.selectedActivityId === 'act_union' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_union')">
+                                <span class="mp-act-step">BỐI CẢNH 2</span>
+                                <strong>Đoàn – Đội</strong>
+                                <p>Phong trào thi đua, kế hoạch chi đội</p>
+                            </div>
+                            <div class="mp-act-box highlighted ${this.selectedActivityId === 'act_experience' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_experience')">
+                                <span class="mp-act-step">BỐI CẢNH 3</span>
+                                <strong>Hoạt động trải nghiệm</strong>
+                                <p>Phân công nhóm, gây quỹ, sản phẩm</p>
+                            </div>
+                            <div class="mp-act-box ${this.selectedActivityId === 'act_extracurricular' ? 'selected' : ''}"
+                                 onclick="event.stopPropagation(); window.ScenarioSystem.selectActivity('act_extracurricular')">
+                                <span class="mp-act-step">BỐI CẢNH 4</span>
+                                <strong>Ngoại khóa</strong>
+                                <p>Dã ngoại, câu lạc bộ, an toàn</p>
+                            </div>
+                        </div>
+
+                        <div style="font-size:11.5px; color:#64748b; margin:10px 0 6px;">
+                            Bốn bối cảnh tổ chức lớp: sinh hoạt lớp, Đoàn – Đội, trải nghiệm, ngoại khóa.
+                        </div>
+
+                        <div class="mp-scenario-featured-card" onclick="event.stopPropagation(); window.ScenarioSystem.selectScenarioInSetup(2)">
+                            <div style="font-size:20px;">🎪</div>
+                            <div style="flex:1;">
+                                <div style="font-weight:800; font-size:14px; color:#0f172a;">Gian hàng không có Khoa</div>
+                                <div style="font-size:12px; color:#475569;">Lớp 8 · Một bạn bị gạt khỏi nhóm, phụ huynh nhắn tin vào nhóm chung</div>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <span class="mp-principle-badge p3">🏫 P3</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- THANH CHỌN KHỐI LỚP -->
+                <div class="mp-card" style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-weight:700; color:#0f172a; font-size:14px;">Khối lớp:</span>
+                        <div style="display:flex; gap:6px;">
+                            
+                                <button class="mp-num-pill ${this.selectedGradeNumber === n ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.selectGradeNumber(6)">6</button>
+                            
+                                <button class="mp-num-pill ${this.selectedGradeNumber === n ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.selectGradeNumber(7)">7</button>
+                            
+                                <button class="mp-num-pill ${this.selectedGradeNumber === n ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.selectGradeNumber(8)">8</button>
+                            
+                                <button class="mp-num-pill ${this.selectedGradeNumber === n ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.selectGradeNumber(9)">9</button>
+                            
+                        </div>
+                        <span style="font-size:13px; color:#475569;">· ${isTeaching ? 'Lớp 7A' : 'Lớp 8B'}</span>
+                    </div>
+                    <button class="mp-btn-primary" style="padding:10px 24px; font-weight:800;" onclick="window.ScenarioSystem.goToFlowStep(5)">
+                        Vào phòng mô phỏng ▶
+                    </button>
                 </div>
             `;
         },
 
+        // ================= TRANG BƯỚC 5: VÀO PHÒNG MÔ PHỎNG (TRANG 3 & TRANG 10) =================
         _renderStep5Page: function () {
             const sc = this.activeScenario;
             if (!sc) return '';
-            const bc = sc.blindContext || {};
-            const modeLabel = this.selectedMode === 'realistic' ? 'Thử thách' : 'Luyện tập';
-            const diffObj = this.difficulties.find(d => d.id === this.selectedDifficulty) || { label: 'Nhẹ' };
-            const seats = bc.seats || {};
-            const colors = ['#1e3a8a', '#9a3412', '#166534'];
 
-            const studentRows = sc.students.map((st, idx) => `
-                <div class="mp-student-chip-row">
-                    <span class="mp-monogram" style="background:${colors[idx % colors.length]};">${escapeHtml(st.name.charAt(0).toUpperCase())}</span>
-                    <div>
-                        <div style="font-weight:700; font-size:14px; color:#0f172a;">${escapeHtml(st.name)}</div>
-                        <div style="font-size:12.5px; color:#64748b;">${escapeHtml(seats[st.id] || 'Bàn đầu trong lớp')}</div>
-                    </div>
-                </div>
-            `).join('');
+            const isTeaching = sc.category === 'teaching';
 
-            return `
-                <div class="mp-kicker">BỐI CẢNH TIẾT HỌC</div>
-                <h1 class="mp-h1">${escapeHtml(bc.classLabel || sc.grade)} · Tình huống lớp học</h1>
+            if (isTeaching) {
+                // Mockup Trang 3: Tình huống giảng dạy - Bài làm nhờ AI
+                return `
+                    ${this._renderTopStepperHeader(2, 'Phòng mô phỏng')}
+                    <div class="mp-kicker">TÌNH HUỐNG GIẢNG DẠY · LỚP 7A · KHOA HỌC TỰ NHIÊN</div>
+                    <h1 class="mp-h1" style="margin:2px 0 12px;">Bài: Trao đổi nước và chất dinh dưỡng ở thực vật</h1>
 
-                <div class="mp-step5-grid" style="margin-top:18px;">
-                    <div class="mp-card">
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
-                            <div>
-                                <div style="font-size:11.5px; font-weight:700; color:#64748b; text-transform:uppercase;">BÀI ĐANG DẠY</div>
-                                <div style="font-size:16px; font-weight:800; color:#0f172a; margin-top:4px;">${escapeHtml(bc.unitName || sc.title)}</div>
+                    <div class="mp-step5-grid-3">
+                        <!-- CỘT 1: KẾ HOẠCH BÀI DẠY (CV 5512) -->
+                        <div class="mp-card">
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">KẾ HOẠCH BÀI DẠY (CV 5512)</strong>
+                            <div class="mp-plan-steps" style="margin-top:12px;">
+                                <div class="mp-plan-step"><span>1</span> Mở đầu</div>
+                                <div class="mp-plan-step"><span>2</span> Hình thành kiến thức</div>
+                                <div class="mp-plan-step active"><span>3</span> <strong>Luyện tập · đang ở đây</strong></div>
+                                <div class="mp-plan-step"><span>4</span> Vận dụng</div>
                             </div>
-                            <div>
-                                <div style="font-size:11.5px; font-weight:700; color:#64748b; text-transform:uppercase;">THỜI LƯỢNG</div>
-                                <div style="font-size:15px; font-weight:700; color:#0f172a; margin-top:4px;">${escapeHtml(sc.duration)} · Chế độ ${modeLabel}</div>
+                            <div style="font-size:12.5px; color:#475569; margin-top:14px; line-height:1.5; background:#f8fafc; padding:10px; border-radius:8px;">
+                                <strong>Hoạt động 3 – Luyện tập:</strong> học sinh làm Phiếu số 3 theo cặp trong 10 phút, sau đó báo cáo và thảo luận.
                             </div>
                         </div>
-                        <div>
-                            <div style="font-size:11.5px; font-weight:700; color:#64748b; text-transform:uppercase;">MỤC TIÊU TIẾT HỌC</div>
-                            <div style="font-size:14.5px; color:#334155; margin-top:4px; line-height:1.5;">${escapeHtml(bc.objective || sc.visibleContext)}</div>
+
+                        <!-- CỘT 2: NHIỆM VỤ CỦA BẠN & HỌC SINH -->
+                        <div class="mp-card">
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">NHIỆM VỤ CỦA BẠN</strong>
+                            <p style="font-size:13.5px; color:#0f172a; line-height:1.5; margin:8px 0 14px;">
+                                Theo dõi các cặp làm Phiếu số 3. Nếu có vấn đề phát sinh, <strong>xử lý sao cho hoạt động Luyện tập tiếp tục</strong> và mọi học sinh vẫn được học.
+                            </p>
+
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">NGUYÊN TẮC XỬ LÝ TRỌNG TÂM</strong>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 16px;">
+                                <span class="mp-principle-badge p1">⚖️ Trung hòa mâu thuẫn</span>
+                                <span class="mp-principle-badge p2">↓ Giảm thiểu thiệt hại</span>
+                                <span class="mp-principle-badge p3">🏫 Nhà trường – Gia đình – Xã hội</span>
+                            </div>
+
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">HỌC SINH TRONG LỚP</strong>
+                            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                                <div class="mp-student-badge-item"><span class="badge-avatar">L</span> <strong>Lan · tổ trưởng</strong> <span class="sub">Tính cách: ẩn</span></div>
+                                <div class="mp-student-badge-item"><span class="badge-avatar">N</span> <strong>Nam</strong> <span class="sub">Tính cách: ẩn</span></div>
+                                <div class="mp-student-badge-item"><span class="badge-avatar">H</span> <strong>Huy</strong> <span class="sub">Tính cách: ẩn</span></div>
+                            </div>
                         </div>
-                        <div class="mp-task-callout">
-                            <div style="font-size:11.5px; font-weight:800; color:#b45309; text-transform:uppercase;">NHIỆM VỤ CỦA BẠN</div>
-                            <div style="font-size:14.5px; font-weight:600; color:#451a03; margin-top:5px; line-height:1.55;">
-                                ${escapeHtml(bc.teacherTask || sc.visibleContext)}
+
+                        <!-- CỘT 3: CĂN CỨ ÁP DỤNG & QUY ĐỊNH AI -->
+                        <div class="mp-card">
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">CĂN CỨ ÁP DỤNG CHO TÌNH HUỐNG NÀY</strong>
+                            <div class="mp-law-chips-list" style="margin:10px 0 16px;">
+                                <span class="mp-law-chip">🏛️ NQ 29-NQ/TW · Quan điểm chỉ đạo</span>
+                                <span class="mp-law-chip">📜 Luật Nhà giáo 2025 · Điều 9, 11</span>
+                                <span class="mp-law-chip">📋 TT 30/2026 · Điều 4, 6, 12</span>
+                                <span class="mp-law-chip">📑 CV 5512 · Phụ lục IV, Hoạt động 3</span>
+                                <span class="mp-law-chip">📊 TT 22/2021 · Điều 4</span>
+                                <span class="mp-law-chip">💡 TT 02/2025 · QĐ 2422/2026</span>
+                            </div>
+
+                            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px;">
+                                <strong style="font-size:12.5px; color:#1e40af; text-transform:uppercase;">QUY ĐỊNH CỦA LỚP VỀ AI</strong>
+                                <p style="font-size:13px; color:#1e3a8a; margin:4px 0 0; line-height:1.45;">
+                                    Được dùng AI để tra cứu, nhưng <strong>phải tự viết câu trả lời</strong> và ghi rõ đã dùng AI ở bước nào.
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mp-card" style="display:flex; flex-direction:column; gap:10px;">
-                        <div style="font-size:15px; font-weight:800; color:#0f172a; margin-bottom:4px;">Học sinh trong lớp</div>
-                        ${studentRows}
-                        <div style="font-size:12.5px; color:#64748b; margin-top:6px; line-height:1.45;">
-                            ⓘ Tính cách của từng em sẽ bộc lộ qua cách các em phản ứng trong lớp.
+                    <div class="mp-footer">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(3)">Đổi tình huống</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.startScenarioFromStep5()">Vào lớp</button>
+                    </div>
+                `;
+            } else {
+                // Mockup Trang 10: Tình huống chủ nhiệm - Gian hàng không có Khoa
+                return `
+                    ${this._renderTopStepperHeader(2, 'Phòng mô phỏng')}
+                    <div class="mp-kicker">TÌNH HUỐNG CHỦ NHIỆM · LỚP 8B · HOẠT ĐỘNG TRẢI NGHIỆM</div>
+                    <h1 class="mp-h1" style="margin:2px 0 12px;">Sinh hoạt lớp: Chuẩn bị gian hàng Hội chợ Xuân gây quỹ</h1>
+
+                    <div class="mp-step5-grid-3">
+                        <!-- CỘT 1: TIẾN TRÌNH TIẾT SINH HOẠT -->
+                        <div class="mp-card">
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">TIẾN TRÌNH TIẾT SINH HOẠT</strong>
+                            <div class="mp-plan-steps" style="margin-top:12px;">
+                                <div class="mp-plan-step"><span>1</span> Sơ kết tuần (Minh – lớp trưởng)</div>
+                                <div class="mp-plan-step active"><span>2</span> <strong>Phân công gian hàng · đang ở đây</strong></div>
+                                <div class="mp-plan-step"><span>3</span> Thảo luận ý tưởng gian hàng</div>
+                                <div class="mp-plan-step"><span>4</span> Giáo viên kết luận</div>
+                            </div>
+                            <div style="font-size:12.5px; color:#475569; margin-top:14px; line-height:1.5; background:#f8fafc; padding:10px; border-radius:8px;">
+                                Ban cán sự tự điều hành; giáo viên chủ nhiệm theo dõi và hỗ trợ.
+                            </div>
+                        </div>
+
+                        <!-- CỘT 2: NHIỆM VỤ CỦA BẠN & NGUYÊN TẮC -->
+                        <div class="mp-card">
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">NHIỆM VỤ CỦA BẠN</strong>
+                            <p style="font-size:13.5px; color:#0f172a; line-height:1.5; margin:8px 0 14px;">
+                                Hỗ trợ ban cán sự hoàn tất phân công, bảo đảm <strong>mỗi bạn đều có ít nhất một việc và không ai bị bỏ lại</strong>.
+                            </p>
+
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">NGUYÊN TẮC XỬ LÝ TRỌNG TÂM</strong>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 16px;">
+                                <span class="mp-principle-badge p3">🏫 Nhà trường – Gia đình – Xã hội</span>
+                                <span class="mp-principle-badge p1">⚖️ Trung hòa mâu thuẫn</span>
+                                <span class="mp-principle-badge p2">↓ Giảm thiểu thiệt hại</span>
+                            </div>
+
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">HỌC SINH TRONG LỚP</strong>
+                            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                                <div class="mp-student-badge-item"><span class="badge-avatar">M</span> <strong>Minh · lớp trưởng</strong> <span class="sub">Tính cách: ẩn</span></div>
+                                <div class="mp-student-badge-item"><span class="badge-avatar">T</span> <strong>Thảo</strong> <span class="sub">Tính cách: ẩn</span></div>
+                                <div class="mp-student-badge-item"><span class="badge-avatar">K</span> <strong>Khoa</strong> <span class="sub">Tính cách: ẩn</span></div>
+                            </div>
+                        </div>
+
+                        <!-- CỘT 3: KÊNH PHỐI HỢP & CĂN CỨ -->
+                        <div class="mp-card">
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">KÊNH PHỐI HỢP CÓ THỂ DÙNG</strong>
+                            <div style="display:flex; flex-direction:column; gap:8px; margin:10px 0 16px;">
+                                <div class="mp-channel-box">
+                                    <strong>👨‍👩‍👧 Cha mẹ học sinh</strong>
+                                    <span>Nhắn riêng · gọi điện · hẹn gặp</span>
+                                </div>
+                                <div class="mp-channel-box">
+                                    <strong>🩺 Tổ tư vấn học đường</strong>
+                                    <span>Phiếu chuyển tư vấn</span>
+                                </div>
+                                <div class="mp-channel-box">
+                                    <strong>🚩 Chi đội 8B</strong>
+                                    <span>Giao chi đội cùng tổ chức</span>
+                                </div>
+                            </div>
+
+                            <strong style="font-size:13px; color:#64748b; letter-spacing:0.5px;">CĂN CỨ ÁP DỤNG</strong>
+                            <div class="mp-law-chips-list" style="margin-top:6px;">
+                                <span class="mp-law-chip">NQ 29-NQ/TW · Quan điểm chỉ đạo</span>
+                                <span class="mp-law-chip">Luật Nhà giáo 2025 · Điều 9</span>
+                                <span class="mp-law-chip">TT 30/2026 · Đ4 k1 d; Đ12 k1 e, g</span>
+                                <span class="mp-law-chip">TT 18/2025 · Tư vấn học đường</span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="mp-footer">
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(4)">Đổi tình huống</button>
-                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.startScenarioFromStep5()">Vào lớp</button>
-                </div>
-            `;
+                    <div class="mp-footer">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(3)">Đổi tình huống</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.startScenarioFromStep5()">Vào lớp</button>
+                    </div>
+                `;
+            }
         },
 
+        // ================= BƯỚC 8: TẠM DỪNG ĐỂ QUAN SÁT (TRANG 5) =================
         _renderStep8ModalHtml: function () {
-            const listening = Boolean(window.SpeechEngine && window.SpeechEngine.isListening);
+            const sc = this.activeScenario;
+            const isTeaching = sc && sc.category === 'teaching';
+
+            const defaultObs = isTeaching
+                ? 'Lan và Nam mâu thuẫn về việc dùng AI, Lan tố cáo trước lớp, Huy hùa theo. Nam có thể bị xấu hổ, Lan thấy bất công, cả lớp đang bị cuốn vào.'
+                : 'Minh gạt Khoa khỏi phân công gian hàng với lời lẽ coi thường. Thảo bênh bạn, lớp bắt đầu chia phe. Khoa bỏ ra ngồi bàn cuối. Mẹ Khoa nhắn tin vào nhóm phụ huynh chung 41 người.';
+
+            const hintText = this.step8HintLevel === 1
+                ? 'Gợi ý 1/2: Trước khi xác định ai đúng ai sai, hãy nghĩ cách để cả lớp không tiếp tục chú ý vào sự việc cá nhân.'
+                : 'Gợi ý 2/2: Ưu tiên nguyên tắc Giảm thiểu thiệt hại (P2) để hạ nhiệt ngay, sau đó mới giải quyết mâu thuẫn riêng (P1) và phối hợp phụ huynh (P3).';
+
             return `
-                <div class="mp-center-card">
-                    <div class="mp-kicker">TẠM DỪNG ĐỂ QUAN SÁT</div>
-                    <h2 style="font-size:24px; font-weight:800; color:#0f172a; margin:0 0 6px;">Bạn nhận thấy điều gì đang xảy ra trong lớp?</h2>
-                    <p style="font-size:14px; color:#475569; margin:0 0 18px;">Mô tả ngắn bằng lời của bạn. Không có lựa chọn gợi ý.</p>
+                <div class="mp-card" style="max-width:680px; margin:0 auto; padding:24px;">
+                    <div class="mp-kicker" style="color:#d97706;">TẠM DỪNG ĐỂ QUAN SÁT</div>
+                    <h2 class="mp-h1" style="font-size:20px; margin:2px 0 10px;">Chuyện gì đang xảy ra, và ai đang bị ảnh hưởng?</h2>
 
-                    <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Nhận định của bạn</label>
-                    <textarea id="mp-step8-input" rows="4" class="mp-input-light" placeholder="Ví dụ: Em học sinh A làm gì, hai bạn còn lại phản ứng ra sao...">${escapeHtml(this.step8Answer)}</textarea>
+                    <textarea id="mp-step8-input" rows="3" class="mp-input-light" style="width:100%; margin-bottom:14px; font-size:13.5px;"
+                              placeholder="Nhận định của bạn...">${escapeHtml(this.step8Answer || defaultObs)}</textarea>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:16px;">
-                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.toggleMic('step8')">
-                            ${listening ? '⏹ Dừng nghe' : '🎙️ Nói thay vì gõ'}
-                        </button>
-                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.submitStep8()">Tiếp tục xử lý</button>
+                    <div style="font-weight:700; font-size:13.5px; color:#0f172a; margin-bottom:8px;">
+                        Bạn sẽ ưu tiên nguyên tắc nào trước? (chọn một hoặc nhiều)
                     </div>
-                    <div style="font-size:12.5px; color:#64748b; margin-top:14px; line-height:1.45;">
-                        Ở chế độ Thử thách, lớp không tạm dừng; câu hỏi này xuất hiện sau khi buổi luyện kết thúc.
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+                        <button class="mp-principle-check-btn ${this.step8PrinciplesSelected.includes('P2') ? 'selected' : ''}"
+                                onclick="window.ScenarioSystem.toggleStep8Principle('P2')">
+                            ${this.step8PrinciplesSelected.includes('P2') ? '✓ ' : ''}↓ Giảm thiểu thiệt hại
+                        </button>
+                        <button class="mp-principle-check-btn ${this.step8PrinciplesSelected.includes('P1') ? 'selected' : ''}"
+                                onclick="window.ScenarioSystem.toggleStep8Principle('P1')">
+                            ${this.step8PrinciplesSelected.includes('P1') ? '✓ ' : ''}⚖️ Trung hòa mâu thuẫn
+                        </button>
+                        <button class="mp-principle-check-btn ${this.step8PrinciplesSelected.includes('P3') ? 'selected' : ''}"
+                                onclick="window.ScenarioSystem.toggleStep8Principle('P3')">
+                            ${this.step8PrinciplesSelected.includes('P3') ? '✓ ' : ''}🏫 Nhà trường – Gia đình – Xã hội
+                        </button>
+                    </div>
+
+                    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; font-size:13px; color:#92400e; margin-bottom:16px;">
+                        💡 ${escapeHtml(hintText)}
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.cycleStep8Hint()">Gợi ý tiếp</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.submitStep8()">Tiếp tục xử lý ▶</button>
                     </div>
                 </div>
             `;
         },
 
+        // ================= BƯỚC 10: HẾT GIỜ / KẾT THÚC =================
         _renderStep10ModalHtml: function () {
             const sc = this.activeScenario;
-            const totalSt = sc ? sc.students.length : 3;
-            const participated = Math.max(Object.keys(this.studentParticipation).length, this.step3Resolved ? totalSt : 0);
-            const teacherTurns = this.transcriptLog.filter(l => l.role === 'teacher').length;
+            const isHomeroom = sc && sc.category === 'homeroom';
+            const reason = isHomeroom
+                ? 'Mọi bạn đã có việc · Đã hẹn trao đổi với gia đình'
+                : 'Báo cáo – thảo luận diễn ra đúng giờ · Mâu thuẫn đã lắng';
+
             return `
-                <div class="mp-center-card" style="text-align:center; max-width:500px;">
-                    <div style="width:48px; height:48px; border-radius:50%; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; font-size:22px; font-weight:900; margin-bottom:12px;">✓</div>
-                    <h2 style="font-size:24px; font-weight:800; color:#0f172a; margin:0 0 6px;">Buổi luyện đã kết thúc</h2>
-                    <p style="font-size:14px; color:#475569; margin:0;">${escapeHtml(this.endReasonText)}</p>
-
-                    <div class="mp-stat-3">
-                        <div class="mp-stat-box">
-                            <div style="font-size:20px; font-weight:800; color:#0f172a;">${formatClock(this.sessionElapsedSec)}</div>
-                            <div style="font-size:12px; color:#64748b; margin-top:2px;">Thời gian</div>
-                        </div>
-                        <div class="mp-stat-box">
-                            <div style="font-size:20px; font-weight:800; color:#0f172a;">${teacherTurns}</div>
-                            <div style="font-size:12px; color:#64748b; margin-top:2px;">Lượt nói của bạn</div>
-                        </div>
-                        <div class="mp-stat-box">
-                            <div style="font-size:20px; font-weight:800; color:#0f172a;">${participated}/${totalSt}</div>
-                            <div style="font-size:12px; color:#64748b; margin-top:2px;">Học sinh tham gia</div>
-                        </div>
+                <div class="mp-card" style="max-width:540px; margin:0 auto; text-align:center; padding:32px 20px;">
+                    <div style="font-size:36px; margin-bottom:8px;">🎉</div>
+                    <h2 class="mp-h1" style="font-size:22px; margin-bottom:8px;">Buổi luyện đã hoàn thành!</h2>
+                    <div class="mp-status-pill-ok" style="display:inline-block; margin-bottom:16px;">
+                        ✓ ${escapeHtml(reason)}
                     </div>
-
-                    <p style="font-size:13.5px; color:#475569; margin:0 0 18px;">Trước khi xem phân tích, hãy dành một phút tự đánh giá buổi luyện của mình.</p>
-                    <button class="mp-btn-primary" style="width:100%; padding:12px;" onclick="window.ScenarioSystem.goToFlowStep(11)">Tự đánh giá</button>
+                    <p style="font-size:13.5px; color:#475569; line-height:1.5; margin-bottom:20px;">
+                        Trước khi xem nhận xét đối chiếu theo 3 nguyên tắc và 6 nhóm văn bản quy phạm, hãy dành 1 phút tự nhìn lại và phản tư cách xử lý của mình.
+                    </p>
+                    <button class="mp-btn-primary" style="width:100%; padding:12px; font-weight:800;" onclick="window.ScenarioSystem.goToFlowStep(11)">
+                        Bắt đầu phản tư ▶
+                    </button>
                 </div>
             `;
         },
 
+        // ================= BƯỚC 11: KẾT THÚC VÀ PHẢN TƯ (TRANG 14) =================
         _renderStep11Page: function () {
-            const ratingBtns = [1, 2, 3, 4, 5].map(n => `
-                <button class="mp-rate-btn ${this.selfEvalScore === n ? 'selected' : ''}"
-                        onclick="window.ScenarioSystem.setSelfEvalScore(${n})">${n}</button>
+            const sc = this.activeScenario;
+            const isHomeroom = sc && sc.category === 'homeroom';
+            const endReason = isHomeroom
+                ? 'mọi bạn đã có việc · đã hẹn trao đổi với gia đình'
+                : 'báo cáo – thảo luận diễn ra đúng giờ · mâu thuẫn đã lắng';
+
+            // Dòng thời gian khoảnh khắc
+            const moments = isHomeroom ? [
+                { time: '12:22', label: 'Minh gạt Khoa' },
+                { time: '12:26', label: 'Nhắc Minh' },
+                { time: '12:30', label: 'Tạm dừng' },
+                { time: '12:33', label: 'Nhắn mẹ Khoa' },
+                { time: '12:38', label: 'Nói riêng Khoa' },
+                { time: '12:44', label: 'Đặt tiêu chí' }
+            ] : [
+                { time: '08:42', label: 'Lan tố Nam' },
+                { time: '08:45', label: 'Huy hùa theo' },
+                { time: '08:53', label: 'Ra hiệu Huy' },
+                { time: '08:54', label: 'Nhắc cả lớp' },
+                { time: '08:55', label: 'Nói riêng Lan-Nam' },
+                { time: '08:58', label: 'Tự viết lại' }
+            ];
+
+            const momentDots = moments.map((m, idx) => `
+                <div class="mp-moment-node ${this.selfEvalSelectedMoment === idx ? 'selected' : ''}"
+                     onclick="window.ScenarioSystem.selfEvalSelectedMoment = ${idx}; window.ScenarioSystem.renderAll();">
+                    <div class="mp-moment-dot"></div>
+                    <span class="mp-moment-time">${m.time}</span>
+                    <span class="mp-moment-label">${m.label}</span>
+                </div>
             `).join('');
 
             return `
-                <div class="mp-kicker">TỰ ĐÁNH GIÁ</div>
-                <h1 class="mp-h1">Bạn thấy mình xử lý thế nào?</h1>
-                <p class="mp-subtitle">Câu trả lời của bạn sẽ được đặt cạnh phân tích của AI để bạn so sánh.</p>
+                ${this._renderTopStepperHeader(3, 'Phản tư')}
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                    <div>
+                        <div class="mp-kicker">BUỔI LUYỆN ĐÃ KẾT THÚC · PHẢN TƯ</div>
+                        <h1 class="mp-h1" style="margin:2px 0 4px;">Nhìn lại trước khi xem nhận xét</h1>
+                    </div>
+                    <div class="mp-end-reason-badge">
+                        Lý do kết thúc: <strong>${escapeHtml(endReason)}</strong>
+                    </div>
+                </div>
 
-                <div class="mp-card">
-                    <div style="font-size:14.5px; font-weight:700; color:#0f172a;">1. Bạn chấm buổi luyện này mấy điểm?</div>
-                    <div class="mp-rating-row">
-                        ${ratingBtns}
-                        <span style="font-size:12.5px; color:#64748b; margin-left:6px;">1 = chưa ổn · 5 = rất tốt</span>
+                <!-- 1. DÒNG THỜI GIAN KHOẢNH KHẮC -->
+                <div class="mp-card" style="margin-bottom:14px; padding:16px 20px;">
+                    <strong style="font-size:13.5px; color:#0f172a;">1. Chọn khoảnh khắc bạn muốn xem lại</strong>
+                    <div class="mp-timeline-track" style="margin-top:14px;">
+                        ${momentDots}
+                    </div>
+                </div>
+
+                <div class="mp-step11-grid-2">
+                    <!-- 2. BẠN ĐÃ THỰC HIỆN NGUYÊN TẮC NÀO? -->
+                    <div class="mp-card">
+                        <strong style="font-size:13.5px; color:#0f172a;">2. Bạn đã thực hiện những nguyên tắc nào? Ghi lại minh chứng</strong>
+                        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                            <label class="mp-checkbox-label">
+                                <input type="checkbox" ${this.selfEvalPrinciples.P2 ? 'checked' : ''} onchange="window.ScenarioSystem.toggleSelfEvalPrinciple('P2')">
+                                <div>
+                                    <strong>Giảm thiểu thiệt hại (P2)</strong>
+                                    <div class="mp-ev-desc">Minh chứng: ${escapeHtml(this.selfEvalEvidence.P2)}</div>
+                                </div>
+                            </label>
+                            <label class="mp-checkbox-label">
+                                <input type="checkbox" ${this.selfEvalPrinciples.P1 ? 'checked' : ''} onchange="window.ScenarioSystem.toggleSelfEvalPrinciple('P1')">
+                                <div>
+                                    <strong>Trung hòa mâu thuẫn (P1)</strong>
+                                    <div class="mp-ev-desc">Minh chứng: ${escapeHtml(this.selfEvalEvidence.P1)}</div>
+                                </div>
+                            </label>
+                            <label class="mp-checkbox-label">
+                                <input type="checkbox" ${this.selfEvalPrinciples.P3 ? 'checked' : ''} onchange="window.ScenarioSystem.toggleSelfEvalPrinciple('P3')">
+                                <div>
+                                    <strong>Nhà trường – Gia đình – Xã hội (P3)</strong>
+                                    <div class="mp-ev-desc">Minh chứng: ${escapeHtml(this.selfEvalEvidence.P3)}</div>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
-                    <div style="font-size:14.5px; font-weight:700; color:#0f172a; margin-bottom:6px;">2. Điều gì bạn làm tốt?</div>
-                    <textarea id="mp-self-good" rows="3" class="mp-input-light" style="margin-bottom:16px;"
-                        placeholder="Ví dụ: Tôi đã giữ bình tĩnh, cho học sinh thời gian suy nghĩ hoặc giao vai trò hợp lý...">${escapeHtml(this.selfEvalGoodText)}</textarea>
+                    <!-- 3 & 4. MỨC GIẢI TỎA & CÂU HỎI LÀM LẠI -->
+                    <div style="display:flex; flex-direction:column; gap:14px;">
+                        <div class="mp-card">
+                            <strong style="font-size:13.5px; color:#0f172a;">3. Theo bạn, mâu thuẫn đã được giải tỏa đến đâu?</strong>
+                            <div style="display:flex; gap:8px; margin-top:10px;">
+                                <button class="mp-pill ${this.selfEvalResolutionLevel === 'still_large' ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.setSelfEvalResolution('still_large')">Vẫn lớn</button>
+                                <button class="mp-pill ${this.selfEvalResolutionLevel === 'reduced' ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.setSelfEvalResolution('reduced')">Đã nhỏ lại</button>
+                                <button class="mp-pill ${this.selfEvalResolutionLevel === 'resolved_monitoring' ? 'selected' : ''}"
+                                        onclick="window.ScenarioSystem.setSelfEvalResolution('resolved_monitoring')">Đã lắng, cần theo dõi</button>
+                            </div>
+                        </div>
 
-                    <div style="font-size:14.5px; font-weight:700; color:#0f172a; margin-bottom:6px;">3. Nếu làm lại, bạn sẽ đổi điều gì?</div>
-                    <textarea id="mp-self-change" rows="3" class="mp-input-light"
-                        placeholder="Ví dụ: Lần sau tôi sẽ ghi nhận ý kiến học sinh trước rồi mới xin lượt cho bạn khác...">${escapeHtml(this.selfEvalChangeText)}</textarea>
+                        <div class="mp-card">
+                            <strong style="font-size:13.5px; color:#0f172a;">4. Nếu làm lại khoảnh khắc ${moments[this.selfEvalSelectedMoment].time}?</strong>
+                            <textarea id="mp-self-retry-input" rows="2" class="mp-input-light" style="margin-top:8px; font-size:13px;"
+                                      placeholder="Bạn sẽ thay đổi câu nói hoặc thao tác nào...">${escapeHtml(this.selfEvalRetryThought)}</textarea>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mp-footer">
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.finishToLawFeedback(true)">Bỏ qua</button>
-                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.finishToLawFeedback(false)">Xem phân tích</button>
+                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(9)">Quay lại lớp học</button>
+                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.finishToNoScoreReport()">Xem nhận xét ▶</button>
                 </div>
             `;
         },
 
+        // ================= BƯỚC 12: NHẬN XÉT TỔNG QUAN – KHÔNG CHẤM ĐIỂM (TRANG 15) =================
         _renderStep12Page: function () {
             const sc = this.activeScenario;
-            if (!sc) return '';
-            const grp = this.scenarioGroups.find(g => g.id === this.selectedGroupId) || { name: sc.group };
-            const gradeObj = this.gradeLevels.find(g => g.id === this.selectedGradeId) || { shortTag: 'THCS' };
-            const report = this.finalLawReport || this.generateLaw2025Report(sc);
-            const firstWarn = report.items.find(it => !it.passed) || report.items[0];
-            const res = this.scenarioResults[sc.id] || {};
+            const isHomeroom = sc && sc.category === 'homeroom';
 
-            const headline = this.step3Resolved
-                ? `Bạn đã điều phối hiệu quả tình huống “${sc.shortTitle.replace(/^\d+\.\s*/, '')}”`
-                : 'Kết quả luyện tập mô phỏng tình huống lớp học';
+            const subTabs = `
+                <div class="mp-subtabs-row">
+                    <button class="mp-subtab ${this.reviewSubTab === 'overview' ? 'active' : ''}" onclick="window.ScenarioSystem.switchReviewSubTab('overview')">Tổng quan (Trang 15)</button>
+                    <button class="mp-subtab ${this.reviewSubTab === 'actions' ? 'active' : ''}" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Từng hành động (Trang 16)</button>
+                    <button class="mp-subtab ${this.reviewSubTab === 'model_solution' ? 'active' : ''}" onclick="window.ScenarioSystem.switchReviewSubTab('model_solution')">Giải pháp mẫu (Trang 17)</button>
+                    <button class="mp-subtab ${this.reviewSubTab === 'progress' ? 'active' : ''}" onclick="window.ScenarioSystem.switchReviewSubTab('progress')">Hồ sơ tiến bộ (Trang 18)</button>
+                </div>
+            `;
 
-            const subHeadline = firstWarn && !firstWarn.passed
-                ? `Điểm cần cải thiện: ở ${firstWarn.timeStr}, ${firstWarn.criterion.name.toLowerCase()} chưa thể hiện đầy đủ.`
-                : 'Tất cả tiêu chí trọng tâm đều thể hiện tốt chuẩn mực Luật Nhà giáo 2025.';
-
-            // Track timeline (Mục b)
-            const teacherEvs = this.transcriptLog.filter(l => l.role === 'teacher').slice(-3);
-            const teacherPills = teacherEvs.length > 0
-                ? teacherEvs.map(ev => `
-                    <span class="mp-track-ev" style="background:${ev.isBad ? '#fee2e2;color:#991b1b;' : '#dbeafe;color:#1e40af;'}">
-                        ${formatClock(ev.timestampSec)} “${escapeHtml(ev.text.slice(0, 20))}”
-                    </span>
-                `).join('')
-                : `<span class="mp-track-ev" style="background:#f1f5f9;color:#64748b;">Chưa có phát ngôn</span>`;
-
-            const studentTracksHtml = sc.students.map((st, idx) => {
-                const bg = idx === 0 ? '#dcfce7;color:#166534;' : '#e2e8f0;color:#334155;';
-                const stTurn = this.transcriptLog.find(l => l.role === 'student' && l.studentId === st.id && l.tag !== 'incident_start');
+            if (isHomeroom) {
+                // Mockup Trang 15: Gian hàng không có Khoa
                 return `
-                    <div class="mp-track-row">
-                        <span style="font-size:12.5px; font-weight:700; color:#475569;">${escapeHtml(st.name)}</span>
-                        <div class="mp-track-lane">
-                            <span class="mp-track-ev" style="background:#f1f5f9;color:#475569;">${escapeHtml(st.initialLine.slice(0, 22))}</span>
-                            ${stTurn ? `<span class="mp-track-ev" style="background:${bg}">${formatClock(stTurn.timestampSec || 90)} ${escapeHtml(stTurn.text.slice(0, 22))}</span>` : ''}
+                    ${this._renderTopStepperHeader(3, 'Nhận xét')}
+                    ${subTabs}
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <div>
+                            <div class="mp-kicker">NHẬN XÉT TỔNG QUAN · GIAN HÀNG KHÔNG CÓ KHOA</div>
+                            <h1 class="mp-h1" style="margin:2px 0 4px;">Bạn đã đưa tình huống từ “lớn” về “đã lắng” và kết nối được với gia đình</h1>
                         </div>
+                        <div class="mp-notice-box-gold">
+                            ⚠ Không điểm số, không xếp loại. Nhận xét dựa trên 9 minh chứng trong buổi luyện.
+                        </div>
+                    </div>
+
+                    <!-- 3 CỘT NGUYÊN TẮC: P2, P1, P3 -->
+                    <div class="mp-no-score-grid-3">
+                        <!-- CỘT 1: GIẢM THIỂU THIỆT HẠI -->
+                        <div class="mp-card mp-principle-col">
+                            <div class="mp-col-header">
+                                <span class="mp-principle-badge p2">↓ Giảm thiểu thiệt hại</span>
+                            </div>
+                            <div class="mp-col-body">
+                                <div class="mp-col-section">
+                                    <strong class="label-ok">Bạn đã làm được:</strong>
+                                    <span>tạm dừng phân công và chuyển cả lớp sang việc chung, nên sự chú ý không dồn vào Khoa hay Minh.</span>
+                                </div>
+                                <div class="mp-quote-box">
+                                    12:30 · “Cả lớp dừng phân công một chút, mình cùng đặt tiêu chí trước nhé.”
+                                </div>
+                                <div class="mp-col-section">
+                                    <strong class="label-adjust">Nên điều chỉnh:</strong>
+                                    <span>câu nhắc Minh trước lớp ở 12:26 làm mức căng thẳng tăng thêm một bậc trước khi giảm.</span>
+                                </div>
+                            </div>
+                            <div class="mp-col-footer">
+                                <span class="mp-law-tag">⚖️ Đ9 k2 e</span>
+                                <span class="mp-law-tag">⚖️ Đ12 k1 e</span>
+                            </div>
+                        </div>
+
+                        <!-- CỘT 2: TRUNG HÒA MÂU THUẪN -->
+                        <div class="mp-card mp-principle-col">
+                            <div class="mp-col-header">
+                                <span class="mp-principle-badge p1">⚖️ Trung hòa mâu thuẫn</span>
+                            </div>
+                            <div class="mp-col-body">
+                                <div class="mp-col-section">
+                                    <strong class="label-ok">Bạn đã làm được:</strong>
+                                    <span>nghe Khoa trước, rồi nghe Minh, không phân xử ai đúng ai sai trước lớp; cả lớp tự đặt tiêu chí phân công.</span>
+                                </div>
+                                <div class="mp-quote-box">
+                                    12:38 · “Cô muốn nghe em kể, em thích làm phần nào của gian hàng?”
+                                </div>
+                                <div class="mp-col-section">
+                                    <strong class="label-adjust">Nên điều chỉnh:</strong>
+                                    <span>chưa hỏi lý do Minh vội vàng (áp lực “đứng nhất”), nên Minh mới chỉ chấp nhận chứ chưa hiểu.</span>
+                                </div>
+                            </div>
+                            <div class="mp-col-footer">
+                                <span class="mp-law-tag">⚖️ Đ9 k2 d</span>
+                                <span class="mp-law-tag">⚖️ Đ12 k1 đ</span>
+                                <span class="mp-law-tag">🏛️ NQ 29</span>
+                            </div>
+                        </div>
+
+                        <!-- CỘT 3: NHÀ TRƯỜNG – GIA ĐÌNH – XÃ HỘI -->
+                        <div class="mp-card mp-principle-col">
+                            <div class="mp-col-header">
+                                <span class="mp-principle-badge p3">🏫 Nhà trường – Gia đình – Xã hội</span>
+                            </div>
+                            <div class="mp-col-body">
+                                <div class="mp-col-section">
+                                    <strong class="label-ok">Bạn đã làm được:</strong>
+                                    <span>trả lời phụ huynh bằng tin nhắn riêng, hẹn gọi điện; trong nhóm chung chỉ xác nhận ngắn, không nêu tên học sinh.</span>
+                                </div>
+                                <div class="mp-quote-box">
+                                    12:33 · “Tối nay khoảng 20h em gọi điện cho chị để nghe thêm về Khoa…”
+                                </div>
+                                <div class="mp-col-section">
+                                    <strong class="label-adjust">Nên điều chỉnh:</strong>
+                                    <span>có thể cân nhắc thêm kênh tư vấn học đường nếu Khoa bị cô lập kéo dài.</span>
+                                </div>
+                            </div>
+                            <div class="mp-col-footer">
+                                <span class="mp-law-tag">⚖️ Đ4 k1 d</span>
+                                <span class="mp-law-tag">⚖️ Đ12 k1 g</span>
+                                <span class="mp-law-tag">🏛️ NQ 29</span>
+                                <span class="mp-law-tag">📋 TT 18/2025</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HÀNG DƯỚI: DIỄN BIẾN CĂNG THẲNG & ĐẶT CẠNH TỰ ĐÁNH GIÁ -->
+                    <div class="mp-step12-bottom-grid" style="margin-top:14px;">
+                        <div class="mp-card">
+                            <strong style="font-size:13.5px; color:#0f172a;">Diễn biến mức căng thẳng</strong>
+                            <div class="mp-tension-flow" style="margin-top:10px;">
+                                <span class="tension-pill red">Lớn · 12:22</span> →
+                                <span class="tension-pill red">Lớn hơn · 12:26</span> →
+                                <span class="tension-pill orange">Đang giảm · 12:30</span> →
+                                <span class="tension-pill yellow">Nhỏ · 12:38</span> →
+                                <span class="tension-pill green">Đã lắng · 12:44</span>
+                            </div>
+                        </div>
+
+                        <div class="mp-card">
+                            <strong style="font-size:13.5px; color:#0f172a;">Đặt cạnh tự đánh giá của bạn</strong>
+                            <p style="font-size:13px; color:#334155; margin:8px 0 0; line-height:1.5;">
+                                Bạn chọn đúng khoảnh khắc 12:26 là điểm chưa ổn, và cách “làm lại” bạn đề xuất trùng với giải pháp mẫu. Bạn đánh giá mâu thuẫn <strong>“đã lắng, cần theo dõi”</strong> – hệ thống hoàn toàn đồng ý.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mp-footer">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(11)">Quay lại phản tư</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Xem từng hành động (Trang 16) ▶</button>
                     </div>
                 `;
-            }).join('');
-
-            // Cards (Mục c: Nhận xét chi tiết theo Luật Nhà giáo 2025, Thông tư 03/2026 & Chuẩn nghề nghiệp)
-            const lawCardsHtml = report.items.map((it, idx) => `
-                <div class="mp-law-item-card ${it.passed ? '' : 'warn'}" style="padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
-                        <strong style="font-size:15px; color:#0f172a;">${idx + 1}. ${escapeHtml(it.criterion.title || it.criterion.name)}</strong>
-                        <span class="${it.passed ? 'mp-badge-ok' : 'mp-badge-warn'}" style="font-size:12px; font-weight:700;">${it.passed ? '✓ Đạt yêu cầu' : '⚠️ Cần cải thiện'}</span>
-                    </div>
-
-                    <div style="background:#f1f5f9; border-radius:8px; padding:8px 12px; font-size:13px; color:#1e293b; display:flex; align-items:center; gap:6px;">
-                        <span style="font-weight:700; color:#2563eb;">💬 Phát ngôn ghi nhận:</span>
-                        <span style="font-style:italic;">${escapeHtml(it.timeStr)} — “${escapeHtml(it.quote)}”</span>
-                    </div>
-
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
-                        <div style="font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:0.4px; font-size:11px; margin-bottom:2px;">
-                            🏛️ Căn cứ pháp lý & Chuẩn mực quy định:
+            } else {
+                // Mockup: Bài làm nhờ AI
+                return `
+                    ${this._renderTopStepperHeader(3, 'Nhận xét')}
+                    ${subTabs}
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <div>
+                            <div class="mp-kicker">NHẬN XÉT TỔNG QUAN · BÀI LÀM NHỜ AI (KHTN 7)</div>
+                            <h1 class="mp-h1" style="margin:2px 0 4px;">Bạn đã giải tỏa mâu thuẫn trước lớp, bảo đảm hoạt động Luyện tập tiếp tục</h1>
                         </div>
-                        <div style="line-height:1.5;">
-                            <span style="color:#1d4ed8; font-weight:700;">📜 Luật Nhà giáo số 73/2025/QH15:</span>
-                            <span style="color:#334155;">${escapeHtml(it.criterion.lawDetail || '')}</span>
-                        </div>
-                        <div style="line-height:1.5;">
-                            <span style="color:#059669; font-weight:700;">📋 Thông tư 03/2026/TT-BGDĐT:</span>
-                            <span style="color:#334155;">${escapeHtml(it.criterion.circularDetail || '')}</span>
-                        </div>
-                        <div style="line-height:1.5;">
-                            <span style="color:#7c3aed; font-weight:700;">🏷️ Chuẩn nghề nghiệp giáo viên:</span>
-                            <span style="color:#334155;">${escapeHtml(it.criterion.standardDetail || '')}</span>
+                        <div class="mp-notice-box-gold">
+                            ⚠ Không điểm số, không xếp loại. Nhận xét dựa trên minh chứng trong buổi luyện.
                         </div>
                     </div>
 
-                    <div style="font-size:13px; line-height:1.55; color:${it.passed ? '#15803d' : '#9a3412'}; background:${it.passed ? '#f0fdf4' : '#fff7ed'}; border:1px solid ${it.passed ? '#bbf7d0' : '#fed7aa'}; border-radius:8px; padding:10px 12px;">
-                        <strong>👉 Hướng dẫn sư phạm:</strong> ${escapeHtml(it.reason)}
+                    <div class="mp-no-score-grid-3">
+                        <div class="mp-card mp-principle-col">
+                            <div class="mp-col-header"><span class="mp-principle-badge p2">↓ Giảm thiểu thiệt hại</span></div>
+                            <div class="mp-col-body">
+                                <div class="mp-col-section">
+                                    <strong class="label-ok">Bạn đã làm được:</strong>
+                                    <span>ra hiệu dừng với Huy và giao việc; thông báo cả lớp tiếp tục làm phiếu, chuyện riêng sẽ trao đổi riêng tại bàn.</span>
+                                </div>
+                                <div class="mp-quote-box">08:53 · “Huy, em chuẩn bị báo cáo câu 1 cho cả lớp giúp cô nhé.”</div>
+                                <div class="mp-col-section">
+                                    <strong class="label-adjust">Nên điều chỉnh:</strong>
+                                    <span>tránh phân xử hoặc quy kết “chép AI là gian lận” trước lớp khi chưa xác minh minh chứng.</span>
+                                </div>
+                            </div>
+                            <div class="mp-col-footer">
+                                <span class="mp-law-tag">⚖️ Đ9 k2 d, e</span>
+                                <span class="mp-law-tag">⚖️ TT 30 Đ12</span>
+                            </div>
+                        </div>
+
+                        <div class="mp-card mp-principle-col">
+                            <div class="mp-col-header"><span class="mp-principle-badge p1">⚖️ Trung hòa mâu thuẫn</span></div>
+                            <div class="mp-col-body">
+                                <div class="mp-col-section">
+                                    <strong class="label-ok">Bạn đã làm được:</strong>
+                                    <span>lắng nghe cả hai phía tại bàn; ghi nhận công sức tự làm phiếu của Lan; cho Nam cơ hội tự viết lại và ghi chú AI.</span>
+                                </div>
+                                <div class="mp-quote-box">08:55 · “Cô nghe Lan trước, rồi nghe Nam. Nam, em kể cô nghe em dùng AI thế nào?”</div>
+                                <div class="mp-col-section">
+                                    <strong class="label-adjust">Nên điều chỉnh:</strong>
+                                    <span>nhắc lại chuẩn mực quy định về AI đã phổ biến từ đầu bài.</span>
+                                </div>
+                            </div>
+                            <div class="mp-col-footer">
+                                <span class="mp-law-tag">⚖️ Đ9 k2 d</span>
+                                <span class="mp-law-tag">📋 TT 02/2025</span>
+                            </div>
+                        </div>
+
+                        <div class="mp-card mp-principle-col">
+                            <div class="mp-col-header"><span class="mp-principle-badge p3">🏫 Nhà trường – Gia đình – Xã hội</span></div>
+                            <div class="mp-col-body">
+                                <div class="mp-col-section">
+                                    <strong class="label-ok">Bạn đã làm được:</strong>
+                                    <span>giải quyết trọn vẹn trong phạm vi lớp học mà không làm tổn thương học sinh; chỉ kết nối gia đình khi cần theo dõi thêm.</span>
+                                </div>
+                                <div class="mp-quote-box">08:58 · “Báo cáo – thảo luận diễn ra đúng giờ.”</div>
+                                <div class="mp-col-section">
+                                    <strong class="label-adjust">Nên điều chỉnh:</strong>
+                                    <span>trao đổi với GVCN để hỗ trợ kỹ năng sử dụng công cụ AI liêm chính.</span>
+                                </div>
+                            </div>
+                            <div class="mp-col-footer">
+                                <span class="mp-law-tag">⚖️ CV 5512 HĐ3</span>
+                                <span class="mp-law-tag">🏛️ NQ 29</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mp-step12-bottom-grid" style="margin-top:14px;">
+                        <div class="mp-card">
+                            <strong style="font-size:13.5px; color:#0f172a;">Diễn biến mức căng thẳng</strong>
+                            <div class="mp-tension-flow" style="margin-top:10px;">
+                                <span class="tension-pill orange">Đang tăng · 08:42</span> →
+                                <span class="tension-pill yellow">Nhỏ · 08:53</span> →
+                                <span class="tension-pill green">Đã lắng · 08:58</span>
+                            </div>
+                        </div>
+                        <div class="mp-card">
+                            <strong style="font-size:13.5px; color:#0f172a;">Đối chiếu tự đánh giá</strong>
+                            <p style="font-size:13px; color:#334155; margin:8px 0 0; line-height:1.5;">
+                                Bạn đã áp dụng chuẩn mực ứng xử sư phạm phù hợp với Điều 9 Luật Nhà giáo 2025 và Thông tư 30/2026.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mp-footer">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(11)">Quay lại phản tư</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Xem từng hành động ▶</button>
+                    </div>
+                `;
+            }
+        },
+
+        // ================= TRANG BỔ SUNG: NHẬN XÉT TỪNG HÀNH ĐỘNG (TRANG 16) =================
+        _renderActionReviewsPage: function () {
+            const sc = this.activeScenario;
+            const isHomeroom = sc && sc.category === 'homeroom';
+
+            const subTabs = `
+                <div class="mp-subtabs-row">
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('overview')">Tổng quan (Trang 15)</button>
+                    <button class="mp-subtab active" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Từng hành động (Trang 16)</button>
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('model_solution')">Giải pháp mẫu (Trang 17)</button>
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('progress')">Hồ sơ tiến bộ (Trang 18)</button>
+                </div>
+            `;
+
+            const actionCards = isHomeroom ? [
+                {
+                    timeStr: '12:26 · Lời nói với cả lớp',
+                    status: 'Chưa phù hợp',
+                    statusCls: 'warn',
+                    quote: '“Minh, lớp trưởng mà nói thế à? Cả lớp thấy có được không?”',
+                    desc: 'Phê bình một học sinh trước tập thể khiến Minh mất mặt và lớp chia phe rõ hơn; chuyện nhỏ có nguy cơ thành lớn. Nhà giáo cần tôn trọng người học và thực hiện quy tắc ứng xử.',
+                    tags: ['P2', 'Luật NG · Đ9 k2 điểm d', 'TT 30 · Đ6 k4']
+                },
+                {
+                    timeStr: '12:30 · Tạm dừng hoạt động + lời nói',
+                    status: 'Phù hợp',
+                    statusCls: 'ok',
+                    quote: '“Cả lớp dừng phân công một chút, mình cùng đặt tiêu chí trước nhé: mỗi bạn một việc, theo điểm mạnh.”',
+                    desc: 'Chuyển sự chú ý từ cá nhân sang nguyên tắc chung; học sinh tự xây dựng quy ước, phát huy tính tích cực, chủ động – đúng định hướng lấy người học làm trung tâm.',
+                    tags: ['P2', 'P1', 'NQ 29', 'TT 30 · Đ12 k1 điểm e']
+                },
+                {
+                    timeStr: '12:33 · Bảng kết nối · nhắn riêng',
+                    status: 'Phù hợp',
+                    statusCls: 'ok',
+                    quote: '“Cảm ơn chị đã báo cho em… Tối nay khoảng 20h em gọi điện cho chị để nghe thêm về Khoa.”',
+                    desc: 'Phản hồi kịp thời, đúng kênh, giữ kín thông tin học sinh trong nhóm chung; tạo quan hệ tin tưởng với gia đình để cùng giáo dục học sinh.',
+                    tags: ['P3', 'TT 30 · Đ12 k1 điểm g', 'NQ 29 · nhà trường – gia đình – xã hội']
+                },
+                {
+                    timeStr: '12:38 · Đi lại gần + nói riêng với Khoa',
+                    status: 'Phù hợp',
+                    statusCls: 'ok',
+                    quote: '“Cô muốn nghe em kể, em thích làm phần nào của gian hàng?”',
+                    desc: 'Hỏi về điểm mạnh thay vì hỏi “ai bắt nạt em”, giúp Khoa an toàn để chia sẻ; thể hiện hiểu đối tượng học sinh và tư vấn, hỗ trợ.',
+                    tags: ['P1', 'TT 30 · Đ12 k1 điểm đ; Đ4 k1 điểm d', 'Luật NG · Đ9 k2 điểm e']
+                }
+            ] : [
+                {
+                    timeStr: '08:53 · Ra hiệu dừng với Huy · Giao nhiệm vụ',
+                    status: 'Phù hợp',
+                    statusCls: 'ok',
+                    quote: '“Huy, em chuẩn bị báo cáo câu 1 cho cả lớp giúp cô nhé.”',
+                    desc: 'Giải tỏa đám đông hùa theo, chuyển năng lượng gây rối thành nhiệm vụ học tập có ích.',
+                    tags: ['P2', 'Luật NG · Đ9 k2 điểm d, e', 'CV 5512 HĐ3']
+                },
+                {
+                    timeStr: '08:54 · Nói với cả lớp',
+                    status: 'Phù hợp',
+                    statusCls: 'ok',
+                    quote: '“Cả lớp tiếp tục làm phiếu. Chuyện của cặp nào, cô sẽ trao đổi riêng với cặp đó.”',
+                    desc: 'Ngăn sự việc lan rộng ra cả lớp, bảo đảm thời gian tiến trình hoạt động 3 đúng 10 phút.',
+                    tags: ['P2', 'TT 30 · Đ12 k1 điểm đ, e']
+                },
+                {
+                    timeStr: '08:55 · Đi lại gần bàn Lan – Nam · Nói nhỏ',
+                    status: 'Phù hợp',
+                    statusCls: 'ok',
+                    quote: '“Cô nghe Lan trước, rồi nghe Nam. Lan đã làm những câu nào? Nam, em kể cô nghe em dùng AI thế nào?”',
+                    desc: 'Nghe đủ hai phía, không phân xử công khai; tạo không gian an toàn để Nam thừa nhận cách dùng AI.',
+                    tags: ['P1', 'TT 22 · Đ4 k4', 'TT 02/2025']
+                }
+            ];
+
+            const cardsHtml = actionCards.map(c => `
+                <div class="mp-action-item-card ${c.statusCls}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <strong style="font-size:14px; color:#0f172a;">${escapeHtml(c.timeStr)}</strong>
+                        <span class="mp-badge-tag ${c.statusCls}">${escapeHtml(c.status)}</span>
+                    </div>
+                    <div class="mp-quote-box" style="margin-bottom:8px;">${escapeHtml(c.quote)}</div>
+                    <div style="font-size:13px; color:#334155; line-height:1.5; margin-bottom:10px;">${escapeHtml(c.desc)}</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        ${c.tags.map(t => `<span class="mp-law-tag">${escapeHtml(t)}</span>`).join('')}
                     </div>
                 </div>
             `).join('');
 
-            const selfEvalAiMsg = res.selfEvalPassed
-                ? 'Bạn đã tự phát hiện điểm cần điều chỉnh cụ thể. Tự đánh giá như vậy đúng với tinh thần Điều 13 khoản 4: dùng chuẩn nghề nghiệp để tự đánh giá và rèn luyện.'
-                : 'Cần nêu rõ điểm làm tốt và 1 điều chỉnh câu nói cụ thể nếu làm lại theo tinh thần Điều 13 khoản 4 Luật Nhà giáo 2025.';
-
             return `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-                    <div>
-                        <div class="mp-kicker">PHÂN TÍCH BUỔI LUYỆN · ${escapeHtml(grp.name.toUpperCase())} · ${escapeHtml(gradeObj.shortTag)} LỚP ${this.selectedGradeNumber}</div>
-                        <h1 class="mp-h1">${escapeHtml(headline)}</h1>
-                        <p class="mp-subtitle">${escapeHtml(subHeadline)}</p>
-                    </div>
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.speakLawReport()">🔊 Nghe phân tích</button>
+                ${this._renderTopStepperHeader(3, 'Nhận xét từng hành động')}
+                ${subTabs}
+                <div class="mp-kicker">NHẬN XÉT TỪNG HÀNH ĐỘNG</div>
+                <h1 class="mp-h1" style="margin:2px 0 12px;">Mỗi lời nói, mỗi thao tác được đối chiếu với nguyên tắc và căn cứ</h1>
+
+                <div class="mp-action-cards-grid">
+                    ${cardsHtml}
                 </div>
 
-                <div class="mp-analysis-top">
-                    <div class="mp-card">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <strong style="font-size:15px;">a. Nhận diện</strong>
-                            <span class="${this.step8Eval && this.step8Eval.isAccurate ? 'mp-badge-ok' : 'mp-badge-warn'}">
-                                ${this.step8Eval && this.step8Eval.isAccurate ? 'Chính xác' : 'Cần bổ sung'}
-                            </span>
-                        </div>
-                        <div style="font-size:13.5px; color:#334155; line-height:1.55;">
-                            <strong>Ghi nhận của bạn:</strong> ${escapeHtml(this.step8Answer || '(Chưa nhập)')}<br>
-                            <strong>Đáp án tình huống:</strong> ${escapeHtml(sc.step1.answer)}
-                        </div>
-                    </div>
-
-                    <div class="mp-card">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                            <strong style="font-size:15px;">b. Diễn biến buổi luyện</strong>
-                            <span style="font-size:12px; color:#64748b;">00:00 → ${formatClock(this.sessionElapsedSec)}</span>
-                        </div>
-                        <div class="mp-track-row">
-                            <span style="font-size:12.5px; font-weight:700; color:#1d4ed8;">Bạn</span>
-                            <div class="mp-track-lane">${teacherPills}</div>
-                        </div>
-                        ${studentTracksHtml}
-                    </div>
-                </div>
-
-                <div class="mp-card" style="margin-bottom:16px;">
-                    <strong style="font-size:15px;">c. Nhận xét theo Luật Nhà giáo 2025</strong>
-                    <div class="mp-law-grid-2">${lawCardsHtml}</div>
-                </div>
-
-                <div class="mp-card">
-                    <strong style="font-size:15px;">d. Đối chiếu với tự đánh giá của bạn</strong>
-                    <div class="mp-compare-2">
-                        <div>
-                            <div style="font-size:13px; font-weight:700; color:#334155;">Bạn tự chấm: ${this.selfEvalScore}/5</div>
-                            <div style="font-size:13.5px; color:#475569; margin-top:4px; line-height:1.5;">
-                                “${escapeHtml(this.selfEvalText || 'Chưa ghi nội dung tự đánh giá')}”
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size:13px; font-weight:700; color:#1d4ed8;">AI nhận xét (Điều 13 khoản 4)</div>
-                            <div style="font-size:13.5px; color:#475569; margin-top:4px; line-height:1.5;">${escapeHtml(selfEvalAiMsg)}</div>
-                        </div>
-                    </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-top:16px; font-size:12.5px; color:#475569;">
+                    <strong>Cách đọc:</strong> nhãn <em>Phù hợp / Chưa phù hợp</em> chỉ áp dụng cho từng hành động cụ thể so với một quy định cụ thể, không cộng dồn thành điểm hay xếp loại cho cả buổi.
                 </div>
 
                 <div class="mp-footer">
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(11)">Quay lại</button>
-                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.goToFlowStep(13)">Xem câu mẫu cho phút ${escapeHtml(firstWarn ? firstWarn.timeStr : '01:10')}</button>
+                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.switchReviewSubTab('overview')">Quay lại tổng quan</button>
+                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.switchReviewSubTab('model_solution')">Xem giải pháp mẫu (Trang 17) ▶</button>
                 </div>
             `;
         },
 
+        // ================= BƯỚC 13: GIẢI PHÁP MẪU · 3 NGUYÊN TẮC (TRANG 17) =================
         _renderStep13Page: function () {
             const sc = this.activeScenario;
-            if (!sc) return '';
-            const ctx = sc.step13Context || { issueLabel: sc.shortTitle, badExampleQuote: '', badConsequence: '' };
-            const firstBadTurn = this.transcriptLog.find(l => l.role === 'teacher' && l.isBad) || this.transcriptLog.find(l => l.role === 'teacher');
-            const displayQuote = firstBadTurn ? firstBadTurn.text : ctx.badExampleQuote;
-            const timeMark = firstBadTurn ? formatClock(firstBadTurn.timestampSec) : '01:10';
-            const tones = sc.step13Tones || [];
+            const isHomeroom = sc && sc.category === 'homeroom';
 
-            const toneCards = tones.map((t, idx) => {
-                const badgeCls = t.toneColor === 'green' ? 'background:#dcfce7;color:#166534;'
-                    : (t.toneColor === 'orange' ? 'background:#ffedd5;color:#9a3412;' : 'background:#dbeafe;color:#1e40af;');
-                return `
-                    <div class="mp-tone-card ${idx === 1 ? 'featured' : ''}">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <span style="padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; ${badgeCls}">${escapeHtml(t.tone)}</span>
-                                <button class="mp-play-round" onclick="window.ScenarioSystem.speakToneSample(${idx})" title="Nghe câu mẫu">▶</button>
-                            </div>
-                            <div style="font-size:15px; font-weight:700; color:#0f172a; line-height:1.45;">“${escapeHtml(t.text)}”</div>
-                        </div>
-                        <div style="font-size:13px; color:#475569; line-height:1.45; border-top:1px solid #f1f5f9; padding-top:10px;">${escapeHtml(t.whyWorks)}</div>
-                    </div>
-                `;
-            }).join('');
-
-            const listening = Boolean(window.SpeechEngine && window.SpeechEngine.isListening);
-
-            return `
-                <div class="mp-kicker">CÂU MẪU GỢI Ý</div>
-                <h1 class="mp-h1">Phút ${escapeHtml(timeMark)} — ${escapeHtml(ctx.issueLabel)}</h1>
-
-                <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px;">
-                    <div style="font-size:13.5px; color:#0f172a;">
-                        <strong style="color:#c2410c; margin-right:8px;">BẠN ĐÃ NÓI</strong>
-                        “${escapeHtml(displayQuote)}”
-                    </div>
-                    <span style="font-size:12.5px; color:#9a3412;">${escapeHtml(ctx.badConsequence)}</span>
-                </div>
-
-                <div class="mp-tone-grid-3">${toneCards}</div>
-
-                <div class="mp-card" style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
-                    <div style="display:flex; align-items:center; gap:14px;">
-                        <button class="mp-mic-circle ${listening ? 'listening' : ''}" style="width:48px; height:48px; font-size:18px;"
-                                onclick="window.ScenarioSystem.toggleMic('step13')">🎙️</button>
-                        <div>
-                            <div style="font-weight:700; font-size:14.5px; color:#0f172a;">Nói thử lại một câu (hoặc bấm nút ▶ ở thẻ trên để thử)</div>
-                            <div style="font-size:13px; color:#475569; margin-top:2px;">
-                                ${this.step13RetryText ? `Bạn vừa nói: “${escapeHtml(this.step13RetryText)}”` : 'Giữ Space hoặc bấm Micro để nói câu sửa của bạn'}
-                            </div>
-                        </div>
-                    </div>
-                    ${this.step13RetrySuccess ? `<div class="mp-status-pill-ok">✓ Học sinh hợp tác tích cực!</div>` : ''}
-                </div>
-
-                <div class="mp-footer">
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(12)">Quay lại phân tích</button>
-                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.goToFlowStep(14)">Tiếp tục</button>
+            const subTabs = `
+                <div class="mp-subtabs-row">
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('overview')">Tổng quan (Trang 15)</button>
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Từng hành động (Trang 16)</button>
+                    <button class="mp-subtab active" onclick="window.ScenarioSystem.switchReviewSubTab('model_solution')">Giải pháp mẫu (Trang 17)</button>
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('progress')">Hồ sơ tiến bộ (Trang 18)</button>
                 </div>
             `;
-        },
 
-        _renderStep14Page: function () {
-            const sc = this.activeScenario;
-            if (!sc) return '';
-            const teacherTurns = this.transcriptLog.filter(l => l.role === 'teacher');
-
-            const decisionRows = (teacherTurns.length > 0 ? teacherTurns : [{ timestampSec: 70, text: 'Mở đầu xử lý tình huống', isBad: false }]).map((t, idx) => {
-                const rawIdx = this.transcriptLog.indexOf(t);
-                const statusTxt = t.isBad ? 'Cần cải thiện · Điều 9 khoản 2 điểm d' : 'Đạt';
+            if (isHomeroom) {
+                // Mockup Trang 17: Gian hàng không có Khoa
                 return `
-                    <div class="mp-decision-row">
-                        <div>
-                            <div style="font-weight:700; font-size:13.5px; color:#0f172a;">
-                                <span style="color:#64748b; margin-right:8px;">${formatClock(t.timestampSec)}</span>
-                                ${escapeHtml(t.text.slice(0, 48))}${t.text.length > 48 ? '...' : ''}
+                    ${this._renderTopStepperHeader(3, 'Giải pháp mẫu')}
+                    ${subTabs}
+                    <div class="mp-kicker">GIẢI PHÁP MẪU · ĐI THEO BA NGUYÊN TẮC</div>
+                    <h1 class="mp-h1" style="margin:2px 0 14px;">Giải tỏa trước, trung hòa sau, phối hợp để theo dõi lâu dài</h1>
+
+                    <div class="mp-model-grid-3">
+                        <!-- BƯỚC 1 -->
+                        <div class="mp-card mp-model-col">
+                            <div class="step-num-badge">1</div>
+                            <strong style="font-size:14.5px; color:#0f172a;">Giải tỏa tại chỗ</strong>
+                            <span class="mp-principle-badge p2" style="margin:4px 0 8px;">Giảm thiểu thiệt hại</span>
+                            <p style="font-size:13px; color:#475569; line-height:1.45;">
+                                Dừng hoạt động đang gây căng thẳng, chuyển sự chú ý sang quy ước chung. Không nêu tên ai trước lớp.
+                            </p>
+                            <div class="mp-quote-box" style="margin:10px 0;">
+                                “Cả lớp dừng phân công một chút, mình cùng đặt tiêu chí trước: mỗi bạn một việc, theo điểm mạnh.”
                             </div>
-                            <div style="font-size:12px; color:${t.isBad ? '#c2410c' : '#166534'}; font-weight:600; margin-top:2px;">${statusTxt}</div>
-                        </div>
-                        <button class="${t.isBad || idx === 0 ? 'mp-btn-primary' : 'mp-btn-secondary'}" style="padding:7px 14px; font-size:12.5px;"
-                                onclick="window.ScenarioSystem.rewindToDecisionPoint(${Math.max(0, rawIdx)})">Tua lại</button>
-                    </div>
-                `;
-            }).join('');
-
-            const progressRows = this.scenarioGroups.map(g => {
-                const cnt = this.groupProgress[g.id] || 0;
-                const pct = Math.min(100, cnt * 25);
-                return `
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#0f172a;">
-                            <span style="font-weight:${this.selectedGroupId === g.id ? '800' : '600'};">${escapeHtml(g.name)}</span>
-                            <span style="color:#64748b;">${cnt > 0 ? `${cnt} buổi` : 'Chưa luyện'}</span>
-                        </div>
-                        <div class="mp-progress-track"><div class="mp-progress-fill" style="width:${pct}%;"></div></div>
-                    </div>
-                `;
-            }).join('');
-
-            // Gợi ý nhóm chưa luyện nhiều nhất
-            const nextGrp = [...this.scenarioGroups].sort((a, b) => (this.groupProgress[a.id] || 0) - (this.groupProgress[b.id] || 0))[0] || this.scenarioGroups[0];
-            const nextScId = nextGrp && nextGrp.scenarioIds ? nextGrp.scenarioIds[0] : 1;
-
-            return `
-                <div class="mp-kicker">LUYỆN LẠI</div>
-                <h1 class="mp-h1">Thử lại khoảnh khắc chưa tốt, hoặc chuyển sang tình huống mới</h1>
-
-                <div class="mp-step14-grid" style="margin-top:20px;">
-                    <div class="mp-card">
-                        <strong style="font-size:15px; color:#0f172a;">Tua lại tại điểm quyết định</strong>
-                        ${decisionRows}
-                    </div>
-
-                    <div style="display:flex; flex-direction:column; gap:16px;">
-                        <div class="mp-card">
-                            <strong style="font-size:15px; color:#0f172a; display:block; margin-bottom:12px;">Hồ sơ tiến bộ</strong>
-                            ${progressRows}
+                            <div style="margin-top:auto; font-size:11.5px; color:#64748b;">⚖️ Đ9 k2 e · Đ12 k1 e</div>
                         </div>
 
-                        <div class="mp-card" style="background:#eff6ff; border-color:#bfdbfe;">
-                            <div style="font-size:11.5px; font-weight:800; color:#1d4ed8; text-transform:uppercase;">GỢI Ý TIẾP THEO</div>
-                            <div style="font-size:16px; font-weight:800; color:#0f172a; margin:6px 0 4px;">
-                                ${escapeHtml(nextGrp.name)} · Lớp ${this.selectedGradeNumber}
+                        <!-- BƯỚC 2 -->
+                        <div class="mp-card mp-model-col">
+                            <div class="step-num-badge">2</div>
+                            <strong style="font-size:14.5px; color:#0f172a;">Nghe riêng từng phía</strong>
+                            <span class="mp-principle-badge p1" style="margin:4px 0 8px;">Trung hòa mâu thuẫn</span>
+                            <p style="font-size:13px; color:#475569; line-height:1.45;">
+                                Nghe Khoa trước, sau đó nghe Minh; ghi nhận mong muốn chính đáng của Minh rồi mới bàn cách sửa.
+                            </p>
+                            <div class="mp-quote-box" style="margin:10px 0;">
+                                “Khoa, cô muốn nghe em kể, em thích làm phần nào? · Minh, cô biết em muốn gian hàng thật tốt. Mình cùng tìm cách để bạn nào cũng góp sức nhé.”
                             </div>
-                            <div style="font-size:13px; color:#334155; line-height:1.45; margin-bottom:14px;">
-                                ${escapeHtml(nextGrp.desc)}. Mở rộng kỹ năng xử lý và đối chiếu Luật Nhà giáo 2025.
+                            <div style="margin-top:auto; font-size:11.5px; color:#64748b;">⚖️ Đ9 k2 d · Đ12 k1 đ</div>
+                        </div>
+
+                        <!-- BƯỚC 3 -->
+                        <div class="mp-card mp-model-col">
+                            <div class="step-num-badge">3</div>
+                            <strong style="font-size:14.5px; color:#0f172a;">Phối hợp đúng kênh</strong>
+                            <span class="mp-principle-badge p3" style="margin:4px 0 8px;">Nhà trường – Gia đình – Xã hội</span>
+                            <p style="font-size:13px; color:#475569; line-height:1.45;">
+                                Nhắn riêng phụ huynh, xác nhận ngắn trong nhóm chung; nếu cần, lập phiếu chuyển tổ tư vấn; giao chi đội cùng theo dõi việc phân công.
+                            </p>
+                            <div class="mp-quote-box" style="margin:10px 0;">
+                                “Cảm ơn chị đã báo. Tối nay em gọi điện để nghe thêm về Khoa và cùng bàn cách giúp con.”
                             </div>
-                            <button class="mp-btn-primary" style="width:100%;"
-                                    onclick="window.ScenarioSystem.launchSuggestedGroup('${nextGrp.id}', ${nextScId})">
-                                Luyện tình huống này
+                            <div style="margin-top:auto; font-size:11.5px; color:#64748b;">⚖️ Đ4 k1 d; Đ12 k1 g · NQ 29 · TT 18/2025</div>
+                        </div>
+                    </div>
+
+                    <div class="mp-step17-extra-grid" style="margin-top:14px;">
+                        <div class="mp-card" style="background:#fef2f2; border-color:#fecaca;">
+                            <strong style="font-size:13.5px; color:#991b1b;">Nếu phụ huynh vẫn bức xúc</strong>
+                            <p style="font-size:12.5px; color:#7f1d1d; margin:4px 0 0; line-height:1.45;">
+                                Đề nghị gặp trực tiếp tại trường, có thể mời thêm cán bộ tư vấn; không tranh luận trên nhóm chung.
+                            </p>
+                        </div>
+                        <div class="mp-card" style="background:#fff7ed; border-color:#fed7aa;">
+                            <strong style="font-size:13.5px; color:#9a3412;">Điều nên tránh</strong>
+                            <p style="font-size:12.5px; color:#7c2d12; margin:4px 0 0; line-height:1.45;">
+                                Phê bình lớp trưởng trước lớp; ép xin lỗi ngay; trả lời phụ huynh kiểu “chuyện trẻ con”.
+                            </p>
+                        </div>
+                        <div class="mp-card" style="display:flex; flex-direction:column; justify-content:center; gap:8px;">
+                            <button class="mp-btn-primary" style="background:#b91c1c; border-color:#991b1b;" onclick="window.ScenarioSystem.goToFlowStep(9)">
+                                ↺ Nói thử lại khoảnh khắc 12:26
+                            </button>
+                            <button class="mp-btn-secondary" onclick="window.ScenarioSystem.startScenarioFromStep5()">
+                                Luyện lại cả tình huống
                             </button>
                         </div>
                     </div>
+
+                    <div class="mp-footer">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Quay lại từng hành động</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.switchReviewSubTab('progress')">Xem hồ sơ tiến bộ (Trang 18) ▶</button>
+                    </div>
+                `;
+            } else {
+                // Mockup: Bài làm nhờ AI
+                return `
+                    ${this._renderTopStepperHeader(3, 'Giải pháp mẫu')}
+                    ${subTabs}
+                    <div class="mp-kicker">GIẢI PHÁP MẪU · ĐI THEO BA NGUYÊN TẮC</div>
+                    <h1 class="mp-h1" style="margin:2px 0 14px;">Giải tỏa trước, lắng nghe riêng, bám sát kế hoạch bài dạy</h1>
+
+                    <div class="mp-model-grid-3">
+                        <div class="mp-card mp-model-col">
+                            <div class="step-num-badge">1</div>
+                            <strong style="font-size:14.5px; color:#0f172a;">Giải tỏa tại chỗ</strong>
+                            <span class="mp-principle-badge p2" style="margin:4px 0 8px;">Giảm thiểu thiệt hại</span>
+                            <p style="font-size:13px; color:#475569; line-height:1.45;">
+                                Ra hiệu dừng với học sinh hùa theo và giao nhiệm vụ có ích; yêu cầu cả lớp tiếp tục làm phiếu.
+                            </p>
+                            <div class="mp-quote-box" style="margin:10px 0;">
+                                “Huy, em chuẩn bị báo cáo câu 1 cho cả lớp giúp cô nhé. Cả lớp tiếp tục làm phiếu, chuyện riêng cô sẽ hỗ trợ tại bàn.”
+                            </div>
+                        </div>
+                        <div class="mp-card mp-model-col">
+                            <div class="step-num-badge">2</div>
+                            <strong style="font-size:14.5px; color:#0f172a;">Nghe riêng hai phía</strong>
+                            <span class="mp-principle-badge p1" style="margin:4px 0 8px;">Trung hòa mâu thuẫn</span>
+                            <p style="font-size:13px; color:#475569; line-height:1.45;">
+                                Đến tận bàn, nghe Lan trước để giải tỏa bất công, sau đó lắng nghe Nam giải thích cách dùng AI.
+                            </p>
+                            <div class="mp-quote-box" style="margin:10px 0;">
+                                “Cảm ơn em đã nói thật. Em tự viết lại câu 2, 3 bằng lời của mình, phần nào lấy từ AI thì ghi chú nhé. Lan, cô ghi nhận em đã tự làm cả phiếu.”
+                            </div>
+                        </div>
+                        <div class="mp-card mp-model-col">
+                            <div class="step-num-badge">3</div>
+                            <strong style="font-size:14.5px; color:#0f172a;">Tiếp tục giờ học</strong>
+                            <span class="mp-principle-badge p3" style="margin:4px 0 8px;">Bám sát kế hoạch</span>
+                            <p style="font-size:13px; color:#475569; line-height:1.45;">
+                                Giữ đúng tiến độ 10 phút của Hoạt động 3 Luyện tập, chuyển sang bước báo cáo – thảo luận đúng giờ.
+                            </p>
+                            <div class="mp-quote-box" style="margin:10px 0;">
+                                “Hết thời gian làm phiếu, cô mời nhóm bạn Huy lên trình bày câu 1!”
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mp-footer">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Quay lại</button>
+                        <button class="mp-btn-primary" onclick="window.ScenarioSystem.switchReviewSubTab('progress')">Xem hồ sơ tiến bộ ▶</button>
+                    </div>
+                `;
+            }
+        },
+
+        // ================= BƯỚC 14: HỒ SƠ TIẾN BỘ (TRANG 18) =================
+        _renderStep14Page: function () {
+            const subTabs = `
+                <div class="mp-subtabs-row">
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('overview')">Tổng quan (Trang 15)</button>
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('actions')">Từng hành động (Trang 16)</button>
+                    <button class="mp-subtab" onclick="window.ScenarioSystem.switchReviewSubTab('model_solution')">Giải pháp mẫu (Trang 17)</button>
+                    <button class="mp-subtab active" onclick="window.ScenarioSystem.switchReviewSubTab('progress')">Hồ sơ tiến bộ (Trang 18)</button>
+                </div>
+            `;
+
+            // Bảng các buổi luyện mẫu (Trang 18)
+            const rows = [
+                { date: '12/11', name: 'Lúc nào cũng là Huy', type: 'Giảng dạy · Khởi động', p2: false, p1: true, p3: false },
+                { date: '15/11', name: 'Bài làm nhờ AI', type: 'Giảng dạy · Luyện tập', p2: true, p1: true, p3: false },
+                { date: '19/11', name: 'Gian hàng không có Khoa', type: 'Chủ nhiệm · Trải nghiệm', p2: true, p1: true, p3: true }
+            ].map(r => `
+                <tr>
+                    <td>${r.date}</td>
+                    <td><strong>${r.name}</strong></td>
+                    <td>${r.type}</td>
+                    <td style="text-align:center;">${r.p2 ? '<span class="mp-dot-filled brown">●</span>' : '<span class="mp-dot-empty">○</span>'}</td>
+                    <td style="text-align:center;">${r.p1 ? '<span class="mp-dot-filled teal">●</span>' : '<span class="mp-dot-empty">○</span>'}</td>
+                    <td style="text-align:center;">${r.p3 ? '<span class="mp-dot-filled green">●</span>' : '<span class="mp-dot-empty">○</span>'}</td>
+                </tr>
+            `).join('');
+
+            return `
+                ${this._renderTopStepperHeader(4, 'Hồ sơ tiến bộ')}
+                ${subTabs}
+                <div class="mp-kicker">HỒ SƠ TIẾN BỘ</div>
+                <h1 class="mp-h1" style="margin:2px 0 14px;">Hành trình của bạn qua 3 buổi luyện</h1>
+
+                <div class="mp-step18-grid-2">
+                    <!-- BẢNG CÁC BUỔI LUYỆN -->
+                    <div class="mp-card">
+                        <table class="mp-progress-table">
+                            <thead>
+                                <tr>
+                                    <th>NGÀY</th>
+                                    <th>TÌNH HUỐNG</th>
+                                    <th>LOẠI</th>
+                                    <th style="text-align:center;">P2</th>
+                                    <th style="text-align:center;">P1</th>
+                                    <th style="text-align:center;">P3</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                        <div style="font-size:12px; color:#64748b; margin-top:8px;">
+                            <em>Chấm tròn đặc:</em> có ít nhất một minh chứng thực hiện nguyên tắc trong buổi đó. Không cộng điểm, không xếp hạng.
+                        </div>
+                    </div>
+
+                    <!-- NHỮNG BỐI CẢNH ĐÃ LUYỆN -->
+                    <div class="mp-card">
+                        <strong style="font-size:13.5px; color:#0f172a;">Những bối cảnh đã luyện</strong>
+                        <div style="margin-top:10px;">
+                            <div style="font-size:11.5px; font-weight:800; color:#64748b;">GIẢNG DẠY</div>
+                            <div class="mp-context-chips" style="margin:6px 0 12px;">
+                                <span class="mp-ctx-chip done">✓ Khởi động</span>
+                                <span class="mp-ctx-chip">Hình thành kiến thức</span>
+                                <span class="mp-ctx-chip done">✓ Luyện tập</span>
+                                <span class="mp-ctx-chip">Vận dụng thực tế</span>
+                            </div>
+
+                            <div style="font-size:11.5px; font-weight:800; color:#64748b;">CHỦ NHIỆM</div>
+                            <div class="mp-context-chips" style="margin-top:6px;">
+                                <span class="mp-ctx-chip">Sinh hoạt lớp</span>
+                                <span class="mp-ctx-chip">Đoàn – Đội</span>
+                                <span class="mp-ctx-chip done">✓ Hoạt động trải nghiệm</span>
+                                <span class="mp-ctx-chip">Ngoại khóa</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mp-step18-bottom-grid" style="margin-top:14px;">
+                    <!-- ĐIỀU ĐÃ CHUYỂN BIẾN -->
+                    <div class="mp-card">
+                        <strong style="font-size:13.5px; color:#0f172a;">Điều đã chuyển biến</strong>
+                        <p style="font-size:13px; color:#334155; margin:8px 0 0; line-height:1.55;">
+                            Ở buổi đầu, bạn xử lý bằng cách nhắc trực tiếp học sinh trước lớp. Đến buổi thứ ba, bạn <strong>tạm dừng hoạt động trước, nói riêng sau</strong>, và lần đầu tiên <strong>chủ động kết nối với gia đình</strong>. Điều còn lặp lại: câu nhắc đầu tiên vẫn hướng vào cá nhân (12:26).
+                        </p>
+                    </div>
+
+                    <!-- GỢI Ý BUỔI TIẾP THEO -->
+                    <div class="mp-card" style="background:#eff6ff; border-color:#bfdbfe;">
+                        <strong style="font-size:13.5px; color:#1e40af;">Gợi ý buổi tiếp theo</strong>
+                        <p style="font-size:13px; color:#1e3a8a; margin:6px 0 12px; line-height:1.5;">
+                            <strong>“Bầu lại lớp trưởng”</strong> – Chủ nhiệm · Sinh hoạt lớp. Luyện câu nhắc đầu tiên không hướng vào cá nhân; bối cảnh bạn chưa thử.
+                        </p>
+                        <button class="mp-btn-primary" style="background:#b91c1c; border-color:#991b1b; padding:8px 18px;"
+                                onclick="window.ScenarioSystem.selectScenarioInSetup(4); window.ScenarioSystem.goToFlowStep(5);">
+                            Bắt đầu
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mp-footer">
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(13)">Quay lại câu mẫu</button>
-                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(4)">Chọn tình huống khác</button>
+                    <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(3)">Chọn tình huống khác</button>
+                    <button class="mp-btn-primary" onclick="window.ScenarioSystem.startScenarioFromStep5()">Luyện lại</button>
                 </div>
             `;
         },
 
-        // ================= HUD TỐI TRONG LỚP HỌC 3D (BƯỚC 6, 7, 9 & THANH TRÊN Ở BƯỚC 8, 10) =================
+        // ================= HUD TRONG LỚP HỌC 3D (TRANG 4, 6, 7, 8, 11, 12) =================
         renderInClassHud: function () {
             const panel = document.getElementById('sim-panel');
             if (!panel) return;
@@ -2493,185 +2207,274 @@
             }
 
             const sc = this.activeScenario;
-            const bc = sc.blindContext || {};
-            const meta = this.stepsMeta.find(s => s.step === this.flowStep) || { title: '' };
-            const modeLabel = this.selectedMode === 'realistic' ? 'Thử thách' : 'Luyện tập';
-            const isModalOverlayStep = this.flowStep === 8 || this.flowStep === 10;
-            const pauseSuffix = this.isPaused ? ' · Đã tạm dừng' : (this.flowStep === 10 ? ' · Đã kết thúc' : '');
+            const isHomeroom = sc.category === 'homeroom';
             const listening = Boolean(window.SpeechEngine && window.SpeechEngine.isListening);
-            const curLang = window.SpeechEngine ? window.SpeechEngine.sttLang : 'vi-VN';
+            const pauseSuffix = this.isPaused ? ' · Đã tạm dừng' : '';
 
-            panel.className = `class3d-shell ${isModalOverlayStep ? 'dimmed-bar-only' : ''}`;
+            panel.className = 'class3d-shell';
 
-            const drawerHtml = this.flowStep === 9 ? `
+            // Top Bar
+            const topBarHtml = `
+                <div class="c3d-topbar">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button class="c3d-pill-dark" onclick="window.ScenarioSystem.goToFlowStep(5)">⬅ Bối cảnh</button>
+                        <button class="c3d-pill-dark" onclick="window.ScenarioSystem.replayCurrentIncident()">↺ Nghe lại</button>
+                        <span class="c3d-pill-dark">⏱ <span id="c3d-timer-val">${formatClock(this.sessionElapsedSec)} / ${formatClock(this.sessionDurationSec)}</span>${pauseSuffix}</span>
+                        <span class="c3d-pill-mode ${this.selectedMode === 'realistic' ? 'c3d-pill-challenge' : ''}">
+                            ${this.selectedMode === 'realistic' ? 'Thử thách' : 'Luyện tập'}
+                        </span>
+                        <span class="c3d-pill-dark">
+                            ${isHomeroom ? 'Lớp 8B · Sinh hoạt lớp · Hội chợ Xuân' : 'Lớp 7A · KHTN · Hoạt động 3: Luyện tập'}
+                        </span>
+                    </div>
+
+                    <!-- MỨC CĂNG THẲNG (CHỈ Ở LUYỆN TẬP) -->
+                    ${this.selectedMode === 'guided' ? `
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:12px; color:#cbd5e1; font-weight:700;">Mức căng thẳng</span>
+                            <div class="c3d-tension-indicator ${this.tensionLevel.toLowerCase().replace(/\s+/g, '-')}">
+                                <span class="dot"></span>
+                                <strong>${this.tensionLevel}</strong>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button class="c3d-pill-dark" onclick="window.ScenarioSystem.togglePracticePause()">${this.isPaused ? '▶ Tiếp' : '⏸ Tạm dừng'}</button>
+                        <button class="c3d-pill-dark" style="background:#15803d; border-color:#22c55e; font-weight:800;" onclick="window.ScenarioSystem.finishPracticePhase()">Kết thúc</button>
+                    </div>
+                </div>
+            `;
+
+            // Toast Phụ huynh (Trang 11)
+            const parentToastHtml = (isHomeroom && this.parentToastVisible) ? `
+                <div class="c3d-parent-notify-toast" onclick="window.ScenarioSystem.openConnectionModal('parents')">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-weight:800; font-size:12.5px; color:#1e3a8a;">Nhóm Phụ huynh lớp 8B · 41 thành viên</span>
+                        <span style="font-size:11px; color:#64748b;">vừa xong</span>
+                    </div>
+                    <div style="font-size:13px; color:#0f172a; line-height:1.4;">
+                        <strong>Mẹ Khoa:</strong> Cô ơi, con tôi về kể bị các bạn gạt ra mấy tuần nay rồi. Lớp mình có chuyện gì vậy cô? Mong cô trả lời.
+                    </div>
+                </div>
+            ` : '';
+
+            // Thẻ nhắc nhở tức thời (Nhánh B - Trang 8)
+            const instantWarningHtml = this.instantWarning ? `
+                <div class="c3d-instant-warning-card">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                        <div style="flex:1;">
+                            <div style="font-weight:800; font-size:13px; color:#b91c1c; margin-bottom:4px;">
+                                ⚠️ Lưu ý (chế độ Luyện tập):
+                            </div>
+                            <div style="font-size:12.5px; color:#450a0a; line-height:1.45;">
+                                ${escapeHtml(this.instantWarning.text)}
+                            </div>
+                            <div style="margin-top:8px; display:flex; gap:6px; align-items:center;">
+                                <span class="mp-law-tag">${escapeHtml(this.instantWarning.lawRefs)}</span>
+                                <span class="mp-principle-badge p2">↓ ${escapeHtml(this.instantWarning.principle)}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <button class="mp-btn-primary" style="background:#b91c1c; border-color:#991b1b; padding:6px 14px; font-size:12px;"
+                                    onclick="window.ScenarioSystem.retryBranchB()">
+                                ↺ Nói lại
+                            </button>
+                            <button class="mp-btn-secondary" style="padding:6px 14px; font-size:12px;"
+                                    onclick="window.ScenarioSystem.dismissInstantWarning()">
+                                Tiếp tục
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
+            // Bảng kết nối 3 bên Modal (Trang 12)
+            const connectionModalHtml = this.connectionModalOpen ? `
+                <div class="c3d-connection-modal-backdrop">
+                    <div class="c3d-connection-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+                            <strong style="font-size:15px; color:#0f172a;">🏫 Bảng kết nối</strong>
+                            <span style="font-size:12px; color:#64748b;">Nhà trường – Gia đình – Xã hội</span>
+                        </div>
+
+                        <div class="mp-tabs-bar" style="margin-bottom:14px;">
+                            <button class="mp-tab-btn ${this.connectionTab === 'parents' ? 'active' : ''}" onclick="window.ScenarioSystem.switchConnectionTab('parents')">Cha mẹ học sinh</button>
+                            <button class="mp-tab-btn ${this.connectionTab === 'counseling' ? 'active' : ''}" onclick="window.ScenarioSystem.switchConnectionTab('counseling')">Tổ tư vấn</button>
+                            <button class="mp-tab-btn ${this.connectionTab === 'chidoi' ? 'active' : ''}" onclick="window.ScenarioSystem.switchConnectionTab('chidoi')">Chi đội 8B</button>
+                        </div>
+
+                        ${this.connectionTab === 'parents' ? `
+                            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+                                <button class="mp-pill ${this.connectionTargetChannel === 'group_reply' ? 'selected' : ''}" onclick="window.ScenarioSystem.selectConnectionChannel('group_reply')">✕ Trả lời trong nhóm chung</button>
+                                <button class="mp-pill ${this.connectionTargetChannel === 'private_msg' ? 'selected' : ''}" onclick="window.ScenarioSystem.selectConnectionChannel('private_msg')">✓ Nhắn riêng mẹ Khoa</button>
+                                <button class="mp-pill ${this.connectionTargetChannel === 'phone' ? 'selected' : ''}" onclick="window.ScenarioSystem.selectConnectionChannel('phone')">Gọi điện</button>
+                                <button class="mp-pill ${this.connectionTargetChannel === 'meet' ? 'selected' : ''}" onclick="window.ScenarioSystem.selectConnectionChannel('meet')">Hẹn gặp</button>
+                            </div>
+
+                            <strong style="font-size:12px; color:#64748b; text-transform:uppercase;">TIN NHẮN RIÊNG · BẢN NHÁP CỦA BẠN</strong>
+                            <textarea id="c3d-conn-draft" rows="4" class="mp-input-light" style="width:100%; margin:6px 0 10px; font-size:13px;">${escapeHtml(this.connectionDraftText)}</textarea>
+
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; margin-bottom:10px;">
+                                <strong style="font-size:11.5px; color:#475569; text-transform:uppercase;">TRONG NHÓM CHUNG:</strong>
+                                <div style="font-size:12.5px; color:#0f172a; margin-top:2px;">
+                                    “Cô đã nhận được tin và sẽ trao đổi riêng với gia đình ạ.” (một câu ngắn, không nêu tên học sinh)
+                                </div>
+                            </div>
+
+                            <div style="font-size:12px; color:#0369a1; background:#f0f9ff; padding:8px 10px; border-radius:6px; margin-bottom:14px;">
+                                💡 <strong>Gợi ý kênh tiếp theo:</strong> nếu Khoa có dấu hiệu bị cô lập kéo dài, lập phiếu chuyển tư vấn học đường cho em.
+                            </div>
+                        ` : `
+                            <div style="padding:20px; text-align:center; color:#64748b; font-size:13px;">
+                                Kênh ${this.connectionTab === 'counseling' ? 'Tổ tư vấn học đường' : 'Chi đội 8B'} đã được liên kết và theo dõi.
+                            </div>
+                        `}
+
+                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <button class="mp-btn-secondary" onclick="window.ScenarioSystem.closeConnectionModal()">Đóng</button>
+                            <button class="mp-btn-primary" onclick="window.ScenarioSystem.sendConnectionMessage()">Gửi tin nhắn</button>
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
+            // Action Dock 4 nhóm (Trang 6)
+            const dockHtml = `
+                <div class="c3d-action-dock-4groups">
+                    <!-- NHÓM 1: LỜI NÓI -->
+                    <div class="c3d-action-group">
+                        <span class="group-title">LỜI NÓI</span>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('speak_all')">
+                            <span>Nói với cả lớp</span>
+                            <span class="btn-sub">Giữ Space</span>
+                            <span class="p-tag p2">P2</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('speak_private')">
+                            <span>Nói riêng một em</span>
+                            <span class="btn-sub">Đi lại gần + nói nhỏ</span>
+                            <span class="p-tag p1">P1·P2</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.showManualTextInput = !window.ScenarioSystem.showManualTextInput; window.ScenarioSystem.renderInClassHud();">
+                            <span>Gõ câu nói</span>
+                            <span class="btn-sub">Khi không tiện nói</span>
+                        </button>
+                    </div>
+
+                    <!-- NHÓM 2: PHI NGÔN NGỮ -->
+                    <div class="c3d-action-group">
+                        <span class="group-title">PHI NGÔN NGỮ</span>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('nonverbal_stop')">
+                            <span>Nhìn, ra hiệu dừng</span>
+                            <span class="btn-sub">Với Huy, với cả lớp</span>
+                            <span class="p-tag p2">P2</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('nonverbal_sit')">
+                            <span>Mời ngồi xuống</span>
+                            <span class="btn-sub">Hạ nhiệt</span>
+                            <span class="p-tag p2">P2</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('nonverbal_wait')">
+                            <span>Im lặng chờ</span>
+                            <span class="btn-sub">Chờ lớp ổn định</span>
+                            <span class="p-tag p2">P2</span>
+                        </button>
+                    </div>
+
+                    <!-- NHÓM 3: TỔ CHỨC LỚP -->
+                    <div class="c3d-action-group">
+                        <span class="group-title">TỔ CHỨC LỚP</span>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('org_pause')">
+                            <span>Tạm dừng hoạt động</span>
+                            <span class="btn-sub">Làm việc cá nhân 2 phút</span>
+                            <span class="p-tag p2">P2</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('org_split')">
+                            <span>Chia lại nhóm</span>
+                            <span class="btn-sub">Tạm tách cặp</span>
+                            <span class="p-tag p1">P1</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('org_assign')">
+                            <span>Giao nhiệm vụ</span>
+                            <span class="btn-sub">${isHomeroom ? 'Khoa vẽ biển hiệu' : 'Huy chuẩn bị báo cáo'}</span>
+                            <span class="p-tag p2">P2</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('org_rules')">
+                            <span>Chỉ quy định / Tiêu chí</span>
+                            <span class="btn-sub">Đưa lên bảng</span>
+                            <span class="p-tag p1">P1</span>
+                        </button>
+                    </div>
+
+                    <!-- NHÓM 4: KẾT NỐI -->
+                    <div class="c3d-action-group">
+                        <span class="group-title">KẾT NỐI</span>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('conn_meet')">
+                            <span>Hẹn gặp riêng sau giờ</span>
+                            <span class="btn-sub">${isHomeroom ? 'Với Minh và Khoa' : 'Với Lan và Nam'}</span>
+                            <span class="p-tag p1">P1</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('conn_parents')">
+                            <span>Trao đổi với phụ huynh</span>
+                            <span class="btn-sub">Mở Bảng kết nối</span>
+                            <span class="p-tag p3">P3</span>
+                        </button>
+                        <button class="c3d-dock-action-btn" onclick="window.ScenarioSystem.executeAction('conn_report')">
+                            <span>Báo GV chủ nhiệm / Tư vấn</span>
+                            <span class="btn-sub">Khi cần theo dõi thêm</span>
+                            <span class="p-tag p3">P3</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Ô gõ phím khi bật
+            const keyboardBarHtml = this.showManualTextInput ? `
+                <div class="c3d-keyboard-bar">
+                    <input id="c3d-custom-input" type="text" class="c3d-speech-input"
+                           placeholder="Gõ câu xử lý sư phạm của thầy cô (Enter để gửi)..."
+                           onkeydown="if(event.key==='Enter'){ window.ScenarioSystem.submitTeacherUtterance(this.value); }">
+                    <button class="mp-btn-primary" onclick="const el=document.getElementById('c3d-custom-input'); if(el) window.ScenarioSystem.submitTeacherUtterance(el.value);">Gửi</button>
+                </div>
+            ` : '';
+
+            // Drawer Lời thoại bên phải
+            const drawerHtml = `
                 <aside class="c3d-drawer">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <strong style="font-size:14px; color:#ffffff;">Lời thoại</strong>
-                        <span style="font-size:11px; color:#94a3b8;">${Object.keys(this.studentParticipation).length}/${sc.students.length} HS</span>
+                        <span style="font-size:11.5px; color:#94a3b8;">Đọc lại học sinh đã nói gì</span>
                     </div>
                     <div class="c3d-drawer-log" id="c3d-log-scroll">
                         ${this.transcriptLog.map(entry => `
-                            <div class="c3d-log-card ${entry.role === 'teacher' ? 'teacher' : ''}">
-                                <div style="font-size:11px; font-weight:700; color:${entry.role === 'teacher' ? '#93c5fd' : '#fbbf24'}; margin-bottom:2px;">
+                            <div class="c3d-log-card ${entry.role === 'teacher' ? 'teacher' : (entry.role === 'action' ? 'action' : '')}">
+                                <div style="font-size:11px; font-weight:700; color:${entry.role === 'teacher' ? '#93c5fd' : (entry.role === 'action' ? '#a78bfa' : '#fbbf24')}; margin-bottom:2px;">
                                     ${escapeHtml(entry.speaker)} · ${formatClock(entry.timestampSec)}
                                 </div>
                                 <div style="line-height:1.45;">${escapeHtml(entry.text)}</div>
                             </div>
                         `).join('')}
                     </div>
-                    ${this.selectedMode === 'guided' ? `
-                        <details style="margin-top:8px; font-size:11.5px; color:#cbd5e1;">
-                            <summary style="cursor:pointer; color:#7dd3fc;">🧪 Thử nhanh nhánh kịch bản</summary>
-                            <div style="display:flex; flex-direction:column; gap:5px; margin-top:6px;">
-                                ${sc.branches.map(b => `
-                                    <button class="mp-ghost-mini" style="background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.16);text-align:left;"
-                                        onclick="window.ScenarioSystem.triggerDemoBranch('${b.id}')">${b.success ? '✅' : '⚠️'} ${escapeHtml(b.label)}</button>
-                                `).join('')}
-                            </div>
-                        </details>
-                    ` : ''}
                 </aside>
-            ` : '';
-
-            const lastLog = this.transcriptLog[this.transcriptLog.length - 1];
-            const rightDockBtn = this.flowStep === 6
-                ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.goToFlowStep(7)">Tiếp: Tình huống ▶</button>`
-                : (this.flowStep === 7
-                    ? `<button class="c3d-action-btn" onclick="window.ScenarioSystem.advanceAfterStep7()">${this.selectedMode === 'realistic' ? 'Xử lý ngay (Bước 9) ▶' : 'Nhận diện tình huống (Bước 8) ▶'}</button>`
-                    : (this.flowStep === 9
-                        ? `
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                ${this.selectedMode === 'guided' ? `<button class="c3d-action-btn" style="background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25);" onclick="window.ScenarioSystem.requestHintInStep9()" title="Xem gợi ý xử lý sư phạm">💡 Gợi ý</button>` : ''}
-                                <button class="c3d-action-btn" style="background:#16a34a; border-color:#22c55e; font-weight:800; box-shadow:0 0 12px rgba(34,197,94,0.4);" onclick="window.ScenarioSystem.finishPracticePhase()" title="Kết thúc buổi luyện để nhận xét theo Luật Nhà giáo 2025">Hoàn thành buổi luyện ▶</button>
-                            </div>
-                        `
-                        : `<button class="c3d-action-btn" style="background:#16a34a; border-color:#22c55e;" onclick="window.ScenarioSystem.finishPracticePhase()">Hoàn thành ▶</button>`));
-
-            const centerBannerHtml = (!isModalOverlayStep && this.hintBannerText) ? `
-                <div class="c3d-center-banner">
-                    <span>${escapeHtml(this.hintBannerText)}</span>
-                    <button class="c3d-action-btn" style="padding:4px 10px;font-size:11.5px;background:rgba(255,255,255,0.2);" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại tình huống">↺ Nghe lại</button>
-                    ${this.flowStep === 7 && this.selectedMode === 'guided' ? `<button class="c3d-action-btn" style="padding:4px 10px;font-size:11.5px;" onclick="window.ScenarioSystem.advanceAfterStep7()">Nhận diện</button>` : ''}
-                </div>
-            ` : '';
+            `;
 
             panel.innerHTML = `
-                <div class="c3d-topbar">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.goToFlowStep(5)" title="Xem lại bối cảnh tình huống (Bước 5)">⬅ Bối cảnh</button>
-                        <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.replayCurrentIncident()" title="Nghe lại mở đầu & phản ứng của học sinh">↺ Nghe lại</button>
-                        <span class="c3d-pill-dark">⏱ <span id="c3d-timer-val">${formatClock(this.sessionElapsedSec)} / ${formatClock(this.sessionDurationSec)}</span>${pauseSuffix}</span>
-                        <span class="c3d-pill-mode ${this.selectedMode === 'realistic' ? 'c3d-pill-challenge' : ''}">${modeLabel}</span>
-                        <span class="c3d-pill-dark">${escapeHtml(bc.classLabel || '')} · ${escapeHtml((bc.unitName || '').split('(')[0].trim())}</span>
-                    </div>
-                    <div style="font-size:12.5px; color:#cbd5e1; font-weight:600;">
-                        ULIS TeachLab · ${escapeHtml((meta.title || '').replace(/\s*trong lớp\s*3D/i, ''))}
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ClassroomGame && window.ClassroomGame.openSettings && window.ClassroomGame.openSettings()" title="Cài đặt hiển thị (Phím O)">⚙️</button>
-                        ${this.selectedMode === 'guided' && !isModalOverlayStep ? `<button class="c3d-pill-dark" style="cursor:pointer;" onclick="window.ScenarioSystem.togglePracticePause()">${this.isPaused ? '▶ Tiếp' : '⏸'}</button>` : ''}
-                        <button class="c3d-pill-dark" style="cursor:pointer; background:#15803d; border-color:#22c55e;" onclick="window.ScenarioSystem.finishPracticePhase()">Hoàn thành</button>
-                    </div>
+                ${topBarHtml}
+                ${parentToastHtml}
+                ${instantWarningHtml}
+                ${connectionModalHtml}
+                <div class="c3d-middle">
+                    ${drawerHtml}
                 </div>
-
-                ${(this.isPaused && !isModalOverlayStep) ? `
-                    <div class="c3d-pause-overlay">
-                        <div class="c3d-pause-card">
-                            <div class="c3d-pause-icon">⏸️</div>
-                            <h2 class="c3d-pause-title">BUỔI LUYỆN ĐÃ TẠM DỪNG</h2>
-                            <p class="c3d-pause-desc">
-                                Thời gian buổi luyện, hoạt họa lớp học và phản ứng của học sinh đã được đóng băng.<br>
-                                Thầy/cô có thể thư giãn, chuẩn bị phương án hoặc xem lại bối cảnh trước khi tiếp tục.
-                            </p>
-                            <div class="c3d-pause-stat">
-                                <span class="c3d-pause-stat-badge">⏱ Thời gian: <strong>${formatClock(this.sessionElapsedSec)}</strong> / ${formatClock(this.sessionDurationSec)}</span>
-                                <span class="c3d-pause-stat-badge">💬 Lượt đối thoại: <strong>${this.transcriptLog.length}</strong></span>
-                            </div>
-                            <div class="c3d-pause-actions">
-                                <button class="c3d-pause-btn-primary" onclick="window.ScenarioSystem.togglePracticePause()">
-                                    ▶ Tiếp tục buổi luyện
-                                </button>
-                                <button class="c3d-pause-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(5)">
-                                    ⬅ Xem lại bối cảnh
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${!isModalOverlayStep ? `
-                    <div class="c3d-middle">
-                        ${centerBannerHtml}
-                        ${drawerHtml}
-                    </div>
-                    <div class="c3d-bottom-dock">
-                        <!-- THẺ GIÁO VIÊN ĐANG MẤP MÁY NÓI & NÚT MICRO -->
-                        <div class="c3d-teacher-dock-box">
-                            <div class="c3d-teacher-avatar-wrapper ${listening ? 'speaking' : ''}">
-                                <img src="${escapeHtml((this.selectedTeacher && this.selectedTeacher.avatarUrl) || 'assets/ui/icon_teacher.png')}"
-                                     class="c3d-teacher-avatar-pic"
-                                     onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
-                                <div class="c3d-teacher-avatar-fallback">👩‍🏫</div>
-                                <div class="c3d-voice-wave ${listening ? 'active' : ''}">
-                                    <span></span><span></span><span></span><span></span>
-                                </div>
-                            </div>
-                            <div class="c3d-teacher-meta">
-                                <span class="c3d-teacher-name">${escapeHtml((this.selectedTeacher && this.selectedTeacher.displayName) || 'Giáo viên')}</span>
-                                <span class="c3d-teacher-status ${listening ? 'speaking' : ''}">${listening ? '🔴 Đang mấp máy nói...' : 'Giáo viên'}</span>
-                            </div>
-                            <button id="c3d-mic-btn" class="c3d-mic-btn-prominent ${listening ? 'listening' : ''}"
-                                    onclick="window.ScenarioSystem.toggleMic('main')"
-                                    title="Nhấn để Bật/Tắt thu âm hoặc giữ phím Space để nói">
-                                <span class="c3d-mic-icon">${listening ? '⏹' : '🎙️'}</span>
-                                <span class="c3d-mic-text">${listening ? 'Dừng & Gửi' : 'Nói (Space)'}</span>
-                            </button>
-                        </div>
-
-                        <!-- KHUNG LỜI NÓI TRỰC TIẾP & GỬI NGAY ĐỂ HỌC SINH PHẢN HỒI -->
-                        <div class="c3d-speech-bar-panel">
-                            <div class="c3d-quick-chips">
-                                <span style="font-size:11px; color:#94a3b8; font-weight:700;">💬 Nói nhanh câu mẫu:</span>
-                                <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Chào cả lớp, cô mời nhóm bạn Huy trình bày ý kiến trước nhé!')">1. Gọi nhóm Huy</button>
-                                <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Nam và Lan cứ bình tĩnh chuẩn bị, cô cho các em thêm 1 phút nhé!')">2. Động viên Lan & Nam</button>
-                                <button type="button" class="c3d-chip-btn" onclick="window.ScenarioSystem.useQuickPrompt('Cả lớp cùng lắng nghe và hỗ trợ ý kiến của bạn nào!')">3. Điều phối cả lớp</button>
-                            </div>
-
-                            <div class="c3d-voice-bubble-row">
-                                <div class="c3d-voice-bubble-display ${listening ? 'active' : ''}">
-                                    <span class="c3d-quote-mark">“</span>
-                                    <span id="c3d-voice-live-text" class="c3d-voice-live-text">${escapeHtml(this.draftUtterance || (listening ? 'Đang lắng nghe lời nói của thầy/cô qua Micro...' : 'Giữ Space hoặc bấm "Nói" để nói xử lý sư phạm...'))}</span>
-                                    <span class="c3d-quote-mark">”</span>
-                                </div>
-                                <button class="c3d-send-instant-btn" onclick="window.ScenarioSystem.submitTeacherUtterance()" title="Gửi lời nói để học sinh 3D phản hồi ngay">
-                                    🚀 Gửi & Phản hồi
-                                </button>
-                                <button class="c3d-keyboard-toggle-btn" onclick="window.ScenarioSystem.toggleManualTextInput()" title="Bật/Tắt nhập bàn phím dự phòng">
-                                    ⌨️
-                                </button>
-                            </div>
-
-                            ${this.showManualTextInput ? `
-                                <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
-                                    <input id="c3d-speech-input" type="text" class="c3d-speech-input" style="flex:1; height:32px; font-size:12.5px;"
-                                        value="${escapeHtml(this.draftUtterance)}"
-                                        placeholder="Nhập câu xử lý sư phạm bằng bàn phím (Enter để gửi)..."
-                                        onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.ScenarioSystem.submitTeacherUtterance(); }">
-                                    <button class="mp-btn-primary" style="padding:4px 12px; font-size:12px; height:32px;" onclick="window.ScenarioSystem.submitTeacherUtterance()">Gửi</button>
-                                </div>
-                            ` : ''}
-                        </div>
-
-                        ${rightDockBtn}
-                    </div>
-                ` : ''}
+                ${keyboardBarHtml}
+                ${dockHtml}
             `;
 
             const logScroll = document.getElementById('c3d-log-scroll');
             if (logScroll) logScroll.scrollTop = logScroll.scrollHeight;
         },
 
-        // ================= HÀM TƯƠNG THÍCH CHO PHÍM TẮT =================
+        // Phím tắt tương thích
         closeWizardForRoam: function () {
             if (window.ClassroomGame && window.ClassroomGame.setFlowPhase) {
                 window.ClassroomGame.setFlowPhase('free');
@@ -2680,14 +2483,8 @@
             this.renderAll();
         },
         openGuideModal: function () { this.goToFlowStep(1); },
-        openScenariosModal: function () { this.goToFlowStep(4); },
-        openStudentsModal: function () {
-            if (this.flowStep >= 5 && this.activeScenario) {
-                this.goToFlowStep(5);
-            } else {
-                this.goToFlowStep(4);
-            }
-        }
+        openScenariosModal: function () { this.goToFlowStep(3); },
+        openStudentsModal: function () { this.goToFlowStep(5); }
     };
 
     window.ScenarioSystem = ScenarioSystem;
