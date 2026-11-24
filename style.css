@@ -1196,17 +1196,41 @@ body[data-flow-phase="classroom3d"] #crosshair {
     opacity: 0.45;
 }
 
-/* ================= GIAO DIỆN MOCKUP SÁNG (BƯỚC 1–5, 8, 10, 11–14) ================= */
-#flow-modal.modal-backdrop {
-    z-index: 120;
-    padding: 0;
-    background: #f8fafc;
+/* ================= GIAO DIỆN MOCKUP SÁNG (BƯỚC 0–5, 8, 10, 11–14) ================= */
+#flow-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #f8fafc !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    padding: 24px 20px !important;
 }
 
-#flow-modal.modal-backdrop.dim-classroom {
-    background: rgba(15, 23, 42, 0.72);
-    backdrop-filter: blur(4px);
-    padding-top: 52px;
+#flow-modal.hidden {
+    display: none !important;
+}
+
+#hud-overlay, #blocker, #stats-panel, #minimap-container, #hud-toolbar, #crosshair, #interaction-prompt, #mobile-controls {
+    display: none !important;
+}
+
+.mp-flow-box {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    width: 100%;
+    max-width: 1120px;
+    padding: 24px 28px;
+    margin: 20px auto;
 }
 
 .mp-shell {
@@ -3578,5 +3602,127 @@ body[data-flow-phase="classroom3d"] #crosshair {
     }
     .c3d-action-dock-4groups {
         grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ================= STYLES CHO TRANG 0: TỔNG QUAN KHUNG LÝ THUYẾT (MOCKUP TRANG 1) ================= */
+.mp-overview-banner {
+    background: #991b1b;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+.mp-overview-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.15fr;
+    gap: 14px;
+}
+.mp-overview-col {
+    padding: 16px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+}
+.mp-overview-step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.mp-ov-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    color: #334155;
+}
+.mp-ov-step span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #991b1b;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+}
+.mp-ov-step.highlight {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #991b1b;
+}
+.mp-ov-step.highlight span {
+    background: #dc2626;
+}
+.mp-ov-step.highlight-blue {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    color: #0284c7;
+}
+.mp-ov-step.highlight-blue span {
+    background: #0284c7;
+}
+
+.mp-ov-principle {
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+.mp-ov-principle.p1 { border-left: 3px solid #0284c7; }
+.mp-ov-principle.p2 { border-left: 3px solid #ea580c; }
+.mp-ov-principle.p3 { border-left: 3px solid #16a34a; }
+.mp-ov-principle strong {
+    font-size: 13px;
+    display: block;
+    margin-bottom: 2px;
+}
+.mp-ov-principle p {
+    font-size: 12px;
+    color: #475569;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.mp-overview-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 14px;
+}
+.mp-law-docs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.mp-law-doc-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.mp-law-doc-card strong {
+    font-size: 12px;
+    display: block;
+    margin-bottom: 2px;
+}
+.mp-law-doc-card p {
+    font-size: 11.5px;
+    color: #475569;
+    margin: 0;
+    line-height: 1.35;
+}
+
+@media (max-width: 960px) {
+    .mp-overview-grid-3,
+    .mp-overview-bottom-grid {
+        grid-template-columns: 1fr;
     }
 }

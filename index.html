@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ULIS TeachLab — Quản lý Lớp học & Luật Nhà giáo 2025</title>
-    <link rel="stylesheet" href="style.css?v=20261124_v1">
+    <link rel="stylesheet" href="style.css?v=20261124_v2">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
 </head>
 <body>
@@ -13,8 +13,8 @@
         <canvas id="webgl-canvas"></canvas>
     </div>
 
-    <!-- HUD Giao Diện Người Chơi -->
-    <div id="hud-overlay">
+    <!-- HUD Giao Diện Người Chơi (Ẩn hoàn toàn trong Bản 2 để tập trung vào Luồng Mô Phỏng Sư Phạm) -->
+    <div id="hud-overlay" style="display:none !important;">
         <!-- Tâm ngắm (Crosshair) -->
         <div id="crosshair"></div>
         <div id="interaction-prompt">
@@ -117,8 +117,8 @@
         </div>
     </div>
 
-    <!-- Màn hình Khởi động ẩn mặc định (luồng bắt đầu trực tiếp từ Bước 1 – Hướng dẫn nhanh) -->
-    <div id="blocker" class="hidden">
+    <!-- Màn hình Khởi động cũ (Ẩn hoàn toàn trong Bản 2) -->
+    <div id="blocker" class="hidden" style="display:none !important;">
         <div id="start-card" style="max-width: 720px;">
             <h1>MÔ PHỎNG QUẢN LÝ LỚP HỌC ẢO 3D</h1>
             <p class="subtitle">Trải nghiệm giảng dạy tiếng Anh 3D với <strong>5 Tình huống Quản lý lớp học</strong>, giao tiếp <strong>Speech-to-Text (Micro) & Text-to-Speech (Học sinh AI)</strong> và nhận xét chuẩn theo <strong>Luật Nhà giáo số 73/2025/QH15</strong>.</p>
@@ -306,13 +306,13 @@
 
     <!-- Tải các thư viện và script logic (v=20261113_v4 chống cache) -->
     <script src="libs/three.min.js"></script>
-    <script src="textures.js?v=20261124_v1"></script>
-    <script src="audio.js?v=20261124_v1"></script>
-    <script src="ttsManifest.js?v=20261124_v1"></script>
-    <script src="speechEngine.js?v=20261124_v1"></script>
-    <script src="scenariosData.js?v=20261124_v1"></script>
-    <script src="scenarioSystem.js?v=20261124_v1"></script>
-    <script src="characters.js?v=20261124_v1"></script>
-    <script src="game.js?v=20261124_v1"></script>
+    <script src="textures.js?v=20261124_v2"></script>
+    <script src="audio.js?v=20261124_v2"></script>
+    <script src="ttsManifest.js?v=20261124_v2"></script>
+    <script src="speechEngine.js?v=20261124_v2"></script>
+    <script src="scenariosData.js?v=20261124_v2"></script>
+    <script src="scenarioSystem.js?v=20261124_v2"></script>
+    <script src="characters.js?v=20261124_v2"></script>
+    <script src="game.js?v=20261124_v2"></script>
 </body>
 </html>

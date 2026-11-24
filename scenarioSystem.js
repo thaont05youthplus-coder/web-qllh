@@ -113,7 +113,7 @@
         // 5: Vào phòng mô phỏng (Trang 3/10) | 6: Khởi động | 7: Tình huống phát sinh (Trang 4/11)
         // 8: Tạm dừng quan sát (Trang 5) | 9: Xử lý tình huống (Trang 6/11/12) | 10: Hết giờ/Kết thúc
         // 11: Phản tư (Trang 14) | 12: Nhận xét tổng quan (Trang 15) | 13: Giải pháp mẫu (Trang 17) | 14: Hồ sơ tiến bộ (Trang 18)
-        flowStep: 1,
+        flowStep: 0,
         maxReachedStep: 1,
         wizardClosedForRoam: false,
 
@@ -230,7 +230,7 @@
             if (window.CharacterManager && window.CharacterManager.setTeacherPersona) {
                 window.CharacterManager.setTeacherPersona(this.selectedTeacher);
             }
-            this.goToFlowStep(1);
+            this.goToFlowStep(0);
         },
 
         _ensureContainers: function () {
@@ -291,7 +291,7 @@
 
         // ================= ĐIỀU HƯỚNG BƯỚC (1–14) =================
         goToFlowStep: function (step) {
-            this.flowStep = Math.max(1, Math.min(14, step));
+            this.flowStep = Math.max(0, Math.min(14, step));
             this.maxReachedStep = Math.max(this.maxReachedStep, this.flowStep);
 
             // Xử lý camera Three.js theo bước
@@ -949,7 +949,8 @@
             modal.classList.remove('hidden');
 
             let contentHtml = '';
-            if (this.flowStep === 1) contentHtml = this._renderStep1Page();
+            if (this.flowStep === 0) contentHtml = this._renderStep0Page();
+            else if (this.flowStep === 1) contentHtml = this._renderStep1Page();
             else if (this.flowStep === 2) contentHtml = this._renderStep2Page();
             else if (this.flowStep === 3) contentHtml = this._renderStep3Page();
             else if (this.flowStep === 5) contentHtml = this._renderStep5Page();
@@ -975,7 +976,8 @@
 
         _renderTopStepperHeader: function (currentPhaseIndex, rightSubBadgeText) {
             const phases = [
-                { idx: 1, label: '1 · Chuẩn bị' },
+                { idx: 0, label: '0 · Khung lý thuyết (Trang 1)' },
+                { idx: 1, label: '1 · Chọn tình huống (Trang 2)' },
                 { idx: 2, label: '2 · Trong lớp học' },
                 { idx: 3, label: '3 · Phản tư & phản hồi' },
                 { idx: 4, label: '4 · Luyện lại' }
@@ -992,6 +994,145 @@
                     </div>
                     <div class="mp-stepper-pills">${pills}</div>
                     <div class="mp-stepper-subbadge">${escapeHtml(rightSubBadgeText || '')}</div>
+                </div>
+            `;
+        },
+
+
+        // ================= TRANG 0: TỔNG QUAN LUỒNG MÔ PHỎNG (MOCKUP TRANG 1) =================
+        _renderStep0Page: function () {
+            return `
+                ${this._renderTopStepperHeader(0, 'Khung lý thuyết')}
+                <div class="mp-overview-banner">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:800; font-size:12px; color:#fee2e2;">TL ULIS TeachLab</span>
+                        <span style="font-size:11.5px; color:#fecaca;">Mockup chi tiết · Phiên bản theo góp ý của giảng viên hướng dẫn</span>
+                    </div>
+                </div>
+
+                <div class="mp-kicker" style="color:#991b1b; font-weight:800; margin-top:10px;">MOCKUP LUỒNG MÔ PHỎNG · BẢN 2</div>
+                <h1 class="mp-h1" style="font-size:24px; color:#0f172a; margin:4px 0 8px;">
+                    Hai loại tình huống nghiệp vụ sư phạm, ba nguyên tắc xử lý, nhận xét không chấm điểm
+                </h1>
+                <p style="font-size:13.5px; color:#475569; line-height:1.6; margin-bottom:18px;">
+                    Tài liệu minh họa hai buổi luyện hoàn chỉnh: <strong>“Bài làm nhờ AI”</strong> (tình huống giảng dạy, Hoạt động Luyện tập) và <strong>“Gian hàng không có Khoa”</strong> (tình huống chủ nhiệm, Hoạt động trải nghiệm). Mỗi buổi đi từ lúc vào phòng, tình huống phát sinh, các cách xử lý và hệ quả, đến phản tư và nhận xét.
+                </p>
+
+                <!-- 3 CỘT TRÊN: NHÓM 1, NHÓM 2, 3 NGUYÊN TẮC -->
+                <div class="mp-overview-grid-3">
+                    <!-- CỘT 1: NHÓM 1 · TÌNH HUỐNG GIẢNG DẠY -->
+                    <div class="mp-card mp-overview-col">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:22px;">📖</span>
+                            <div>
+                                <strong style="font-size:14.5px; color:#991b1b;">Nhóm 1 · Tình huống giảng dạy</strong>
+                                <div style="font-size:11.5px; color:#64748b;">Công tác giảng dạy chuyên môn, đi theo chu trình một giờ học</div>
+                            </div>
+                        </div>
+                        <div class="mp-overview-step-list">
+                            <div class="mp-ov-step"><span>1</span> <strong>Khởi động (Mở đầu)</strong></div>
+                            <div class="mp-ov-step"><span>2</span> <strong>Hình thành kiến thức mới</strong></div>
+                            <div class="mp-ov-step highlight"><span>3</span> <strong>Luyện tập</strong> (Kịch bản: Bài làm nhờ AI)</div>
+                            <div class="mp-ov-step"><span>4</span> <strong>Vận dụng vào thực tế</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- CỘT 2: NHÓM 2 · TÌNH HUỐNG CHỦ NHIỆM LỚP -->
+                    <div class="mp-card mp-overview-col">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:22px;">👥</span>
+                            <div>
+                                <strong style="font-size:14.5px; color:#0284c7;">Nhóm 2 · Tình huống chủ nhiệm lớp</strong>
+                                <div style="font-size:11.5px; color:#64748b;">Công tác giáo viên chủ nhiệm, tổ chức lớp học</div>
+                            </div>
+                        </div>
+                        <div class="mp-overview-step-list">
+                            <div class="mp-ov-step"><span>1</span> <strong>Sinh hoạt lớp</strong></div>
+                            <div class="mp-ov-step"><span>2</span> <strong>Hoạt động Đoàn – Đội</strong></div>
+                            <div class="mp-ov-step highlight-blue"><span>3</span> <strong>Hoạt động trải nghiệm</strong> (Kịch bản: Gian hàng không có Khoa)</div>
+                            <div class="mp-ov-step"><span>4</span> <strong>Hoạt động ngoại khóa</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- CỘT 3: BA NGUYÊN TẮC XỬ LÝ CHUNG -->
+                    <div class="mp-card mp-overview-col" style="background:#f8fafc;">
+                        <strong style="font-size:14px; color:#0f172a; margin-bottom:8px; display:block;">Ba nguyên tắc xử lý chung</strong>
+                        
+                        <div class="mp-ov-principle p1">
+                            <strong style="color:#0369a1;">⚖️ Trung hòa mâu thuẫn</strong>
+                            <p>Lắng nghe đủ các bên, tìm điểm chung, không phân xử vội.</p>
+                        </div>
+                        <div class="mp-ov-principle p2">
+                            <strong style="color:#c2410c;">↓ Giảm thiểu thiệt hại</strong>
+                            <p>Giải tỏa ngay: chuyện lớn thành nhỏ, chuyện nhỏ thành không; không để lan rộng.</p>
+                        </div>
+                        <div class="mp-ov-principle p3">
+                            <strong style="color:#15803d;">🏫 Nhà trường – Gia đình – Xã hội</strong>
+                            <p>Phối hợp đúng kênh với gia đình, tổ tư vấn, Đoàn – Đội khi vượt quá phạm vi lớp học.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2 KHỐI DƯỚI: CĂN CỨ NHẬN XÉT & NHẬN XÉT KHÔNG CHẤM ĐIỂM -->
+                <div class="mp-overview-bottom-grid" style="margin-top:14px;">
+                    <!-- CĂN CỨ NHẬN XÉT -->
+                    <div class="mp-card">
+                        <strong style="font-size:13.5px; color:#0f172a; display:block; margin-bottom:8px;">Căn cứ nhận xét (6 nhóm văn bản)</strong>
+                        <div class="mp-law-docs-grid">
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#0f172a;">Nghị quyết 29-NQ/TW (2013)</strong>
+                                <p>Định hướng: phát triển phẩm chất, năng lực; nhà trường kết hợp gia đình và xã hội; đổi mới đánh giá.</p>
+                            </div>
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#991b1b;">Luật Nhà giáo 73/2025/QH15</strong>
+                                <p>Nghĩa vụ (Điều 9), việc không được làm (Điều 11), tự đánh giá (Điều 13).</p>
+                            </div>
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#0284c7;">Thông tư 30/2026/TT-BGDĐT</strong>
+                                <p>Chuẩn nghề nghiệp GV phổ thông: Điều 4, 6, 12 (GV THCS hạng III).</p>
+                            </div>
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#b45309;">Công văn 5512/BGDĐT-GDTrH</strong>
+                                <p>Kế hoạch bài dạy 4 hoạt động; mỗi hoạt động gồm giao, thực hiện, báo cáo – thảo luận, kết luận.</p>
+                            </div>
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#059669;">Thông tư 22/2021/TT-BGDĐT</strong>
+                                <p>Đánh giá học sinh THCS (sửa đổi bởi TT 89/2026): yêu cầu đánh giá, Điều 4.</p>
+                            </div>
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#7c3aed;">TT 02/2025 · QĐ 2422/2026</strong>
+                                <p>Khung năng lực số người học, giáo viên; Khung nội dung giáo dục AI.</p>
+                            </div>
+                            <div class="mp-law-doc-card">
+                                <strong style="color:#475569;">Thông tư 18/2025/TT-BGDĐT</strong>
+                                <p>Tư vấn học đường và công tác xã hội trong trường học (đề xuất bổ sung).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NHẬN XÉT KHÔNG CHẤM ĐIỂM -->
+                    <div class="mp-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                            <strong style="font-size:13.5px; color:#0f172a; display:block; margin-bottom:8px;">Nhận xét không chấm điểm</strong>
+                            <p style="font-size:13px; color:#475569; line-height:1.6;">
+                                <strong>Không điểm số, không xếp loại</strong> Trung bình/Khá/Xuất sắc. Mỗi nhận xét gồm: <strong>minh chứng</strong> (lời nói, hành động có mốc thời gian), <strong>đối chiếu với nguyên tắc và căn cứ</strong>, gợi ý cách làm tiếp theo. Kết luận dựa trên nhiều minh chứng, không suy rộng từ một câu nói.
+                            </p>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">
+                                <span class="mp-principle-badge p1">⚖️ P1</span>
+                                <span class="mp-principle-badge p2">↓ P2</span>
+                                <span class="mp-principle-badge p3">🏫 P3</span>
+                                <span class="mp-badge-tag ok">Phù hợp</span>
+                                <span class="mp-badge-tag warn">Chưa phù hợp</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:18px;">
+                            <button class="mp-btn-primary" style="width:100%; padding:14px; font-size:15px; font-weight:800; background:#991b1b; border-color:#7f1d1d; box-shadow:0 4px 14px rgba(153,27,27,0.3);"
+                                    onclick="window.ScenarioSystem.goToFlowStep(3)">
+                                BẮT ĐẦU CHỌN TÌNH HUỐNG (TRANG 2) ▶
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
         },
@@ -1249,9 +1390,12 @@
                         </div>
                         <span style="font-size:13px; color:#475569;">· ${isTeaching ? 'Lớp 7A' : 'Lớp 8B'}</span>
                     </div>
-                    <button class="mp-btn-primary" style="padding:10px 24px; font-weight:800;" onclick="window.ScenarioSystem.goToFlowStep(5)">
-                        Vào phòng mô phỏng ▶
-                    </button>
+                    <div style="display:flex; gap:8px;">
+                        <button class="mp-btn-secondary" onclick="window.ScenarioSystem.goToFlowStep(0)">⬅ Khung lý thuyết (Trang 1)</button>
+                        <button class="mp-btn-primary" style="padding:10px 24px; font-weight:800;" onclick="window.ScenarioSystem.goToFlowStep(5)">
+                            Vào phòng mô phỏng (Trang 3/10) ▶
+                        </button>
+                    </div>
                 </div>
             `;
         },
